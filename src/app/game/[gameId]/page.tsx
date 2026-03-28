@@ -1,0 +1,305 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import ConfidenceMeter from "@/components/ConfidenceMeter";
+import MetricBar from "@/components/MetricBar";
+import OverUnder from "@/components/OverUnder";
+import PlayerProp from "@/components/PlayerProp";
+import PlayerHeadshot from "@/components/PlayerHeadshot";
+import { getPredictions } from "@/lib/get-predictions";
+import { formatGameTime, formatDate } from "@/lib/utils";
+import { TeamMetrics } from "@/lib/types";
+import { TEAM_COLORS } from "@/lib/team-colors";
+import CollapsibleFactors from "@/components/CollapsibleFactors";
+
+export const revalidate = 180;
+
+export default async function GameDetailPage({
+  params,
+}: {
+  params: Promise<{ gameId: string }>;
+}) {
+  const { gameId } = await params;
+  const data = await getPredictions();
+
+  if (!data) notFound();
+
+  const game = data.predictions.find((p) => String(p.gameId) === gameId);
+  if (!game) notFound();
+
+  const { homeTeam, awayTeam, predictedWinner, winnerConfidence } = game;
+  const winner = predictedWinner === "home" ? homeTeam : awayTeam;
+  const awayTopPlayer = awayTeam.topPlayers?.[0];
+  const homeTopPlayer = homeTeam.topPlayers?.[0];
+
+  return (
+    <>
+      <Header />
+
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8">
+        {/* Back link */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-medium-gray hover:text-charcoal transition-colors mb-6"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          All Predictions
+        </Link>
+
+        {/* Hero Matchup Section */}
+        <div className="rounded-2xl overflow-hidden mb-8 bg-white border border-border-gray relative">
+
+          {/* Game meta bar */}
+          <div className="px-6 py-2.5 flex items-center justify-between border-b border-border-gray bg-light-gray">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-charcoal">
+              {awayTeam.teamAbbrev} @ {homeTeam.teamAbbrev} &middot; {formatDate(game.gameDate)}
+            </span>
+            <span className="text-[11px] font-medium text-medium-gray">
+              {formatGameTime(game.startTime)} &middot; {game.venue}
+            </span>
+          </div>
+
+          {/* 3-column layout */}
+          <div className="px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-stretch gap-4 sm:gap-0">
+            {/* Away column */}
+            <div className={`flex-1 flex flex-col items-center justify-center gap-3 ${predictedWinner === "away" ? "bg-green-50 rounded-lg p-4 ring-2 ring-green-500" : "p-4"}`}>
+              <div className="flex items-center gap-3">
+                {awayTeam.teamLogo && (
+                  <img src={awayTeam.teamLogo} alt={awayTeam.teamAbbrev} className="w-14 h-14" />
+                )}
+                <div>
+                  <p className="font-teko text-3xl sm:text-4xl font-bold uppercase leading-none" style={{ color: TEAM_COLORS[awayTeam.teamAbbrev] ?? "#232525" }}>
+                    {awayTeam.teamAbbrev}
+                  </p>
+                  <p className="text-[11px] text-medium-gray">{awayTeam.teamName}</p>
+                </div>
+              </div>
+              {awayTopPlayer && (
+                <div className="flex flex-col items-center gap-1 pt-2 border-t border-border-gray/50 w-full">
+                  <PlayerHeadshot src={awayTopPlayer.headshot} name={`${awayTopPlayer.firstName} ${awayTopPlayer.lastName}`} size={72} />
+                  <p className="text-sm font-bold text-charcoal">{awayTopPlayer.firstName[0]}. {awayTopPlayer.lastName}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-medium-gray"><span className="font-bold text-charcoal">{awayTopPlayer.goals}</span> G</span>
+                    <span className="text-xs text-medium-gray"><span className="font-bold text-charcoal">{awayTopPlayer.assists}</span> A</span>
+                    <span className="text-xs text-medium-gray"><span className="font-bold text-charcoal">{awayTopPlayer.points}</span> P</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Center — pick + confidence */}
+            <div className="flex flex-col items-center justify-center px-2 sm:px-10 sm:min-w-[200px] py-2 sm:py-0 border-y sm:border-y-0 border-border-gray/50">
+              <p className="font-teko text-2xl sm:text-3xl leading-none">
+                <span className="text-medium-gray font-bold">Pick: </span>
+                <span className="font-bold" style={{ color: TEAM_COLORS[winner.teamAbbrev] ?? "#232525" }}>{winner.teamAbbrev}</span>
+              </p>
+              <p className="text-base sm:text-lg text-medium-gray font-semibold mt-1">{winnerConfidence}% confidence</p>
+              <div className="w-full max-w-[200px] mt-2 h-3 bg-border-gray rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 rounded-full" style={{ width: `${winnerConfidence}%` }} />
+              </div>
+            </div>
+
+            {/* Home column */}
+            <div className={`flex-1 flex flex-col items-center justify-center gap-3 ${predictedWinner === "home" ? "bg-green-50 rounded-lg p-4 ring-2 ring-green-500" : "p-4"}`}>
+              <div className="flex items-center gap-3">
+                {homeTeam.teamLogo && (
+                  <img src={homeTeam.teamLogo} alt={homeTeam.teamAbbrev} className="w-14 h-14" />
+                )}
+                <div>
+                  <p className="font-teko text-3xl sm:text-4xl font-bold uppercase leading-none" style={{ color: TEAM_COLORS[homeTeam.teamAbbrev] ?? "#232525" }}>
+                    {homeTeam.teamAbbrev}
+                  </p>
+                  <p className="text-[11px] text-medium-gray">{homeTeam.teamName}</p>
+                </div>
+              </div>
+              {homeTopPlayer && (
+                <div className="flex flex-col items-center gap-1 pt-2 border-t border-border-gray/50 w-full">
+                  <PlayerHeadshot src={homeTopPlayer.headshot} name={`${homeTopPlayer.firstName} ${homeTopPlayer.lastName}`} size={72} />
+                  <p className="text-sm font-bold text-charcoal">{homeTopPlayer.firstName[0]}. {homeTopPlayer.lastName}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-medium-gray"><span className="font-bold text-charcoal">{homeTopPlayer.goals}</span> G</span>
+                    <span className="text-xs text-medium-gray"><span className="font-bold text-charcoal">{homeTopPlayer.assists}</span> A</span>
+                    <span className="text-xs text-medium-gray"><span className="font-bold text-charcoal">{homeTopPlayer.points}</span> P</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Main content grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Left column: Metrics (spans 2 cols on large) */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Matchup Breakdown */}
+            <section className="bg-white rounded-xl border-l-4 border-espn-red shadow-sm p-6">
+              <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
+                Matchup Breakdown
+              </h2>
+              <div className="flex items-center justify-between mb-4 text-xs font-semibold uppercase tracking-wider">
+                <span className="text-accent-blue">{awayTeam.teamAbbrev} (Away)</span>
+                <span className="text-espn-red">{homeTeam.teamAbbrev} (Home)</span>
+              </div>
+              <div className="space-y-1">
+                <MetricBar label="Time on Attack" homeValue={homeTeam.timeOnAttack} awayValue={awayTeam.timeOnAttack} />
+                <MetricBar label="Shots on Goal" homeValue={homeTeam.shotsOnGoal} awayValue={awayTeam.shotsOnGoal} format={(v) => v.toFixed(1)} />
+                <MetricBar label="Off. Faceoff %" homeValue={homeTeam.offensiveFaceoffPct} awayValue={awayTeam.offensiveFaceoffPct} format={(v) => `${v.toFixed(0)}%`} />
+                <MetricBar label="Roster Health" homeValue={homeTeam.irImpact} awayValue={awayTeam.irImpact} />
+                <MetricBar label="Power Play %" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(0)}%`} />
+                <MetricBar label="Recent Form" homeValue={homeTeam.recentForm} awayValue={awayTeam.recentForm} />
+              </div>
+            </section>
+
+            {/* Scoring Stats */}
+            <section className="bg-white rounded-xl border-l-4 border-accent-blue shadow-sm p-6">
+              <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
+                Scoring Averages
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <TeamStatCard team={awayTeam} side="away" />
+                <TeamStatCard team={homeTeam} side="home" />
+              </div>
+            </section>
+
+            {/* Composite Score Comparison */}
+            <section className="bg-white rounded-xl border-l-4 border-charcoal/30 shadow-sm p-6">
+              <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
+                Composite Score
+              </h2>
+              <div className="flex items-end gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-charcoal">{awayTeam.teamAbbrev}</span>
+                    <span className="text-sm font-bold text-charcoal">{awayTeam.compositeScore.toFixed(1)}</span>
+                  </div>
+                  <div className="h-4 bg-border-gray rounded-full overflow-hidden">
+                    <div className="h-full bg-accent-blue rounded-full transition-all duration-500" style={{ width: `${Math.min(100, awayTeam.compositeScore)}%` }} />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-charcoal">{homeTeam.teamAbbrev}</span>
+                    <span className="text-sm font-bold text-charcoal">{homeTeam.compositeScore.toFixed(1)}</span>
+                  </div>
+                  <div className="h-4 bg-border-gray rounded-full overflow-hidden">
+                    <div className="h-full bg-espn-red rounded-full transition-all duration-500" style={{ width: `${Math.min(100, homeTeam.compositeScore)}%` }} />
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-medium-gray mt-3">
+                Composite score includes home ice advantage (+3 for {homeTeam.teamAbbrev}).
+                Weights: Time on Attack 25%, Shots 22%, Faceoffs 18%, Roster Health 15%, Power Play 12%, Recent Form 8%.
+              </p>
+            </section>
+          </div>
+
+          {/* Right column: Sidebar */}
+          <div className="space-y-6">
+
+            {/* Key Factors */}
+            <section className="bg-white rounded-xl border border-border-gray shadow-sm p-6">
+              <CollapsibleFactors factors={game.keyFactors} />
+            </section>
+
+            {/* Over/Under */}
+            <section className="bg-white rounded-xl border border-border-gray shadow-sm p-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-teko text-lg font-bold uppercase tracking-tight text-charcoal">
+                  Over/Under
+                </h2>
+                <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full ${
+                  game.overUnder.prediction === "OVER"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-espn-red"
+                }`}>
+                  {game.overUnder.prediction}
+                </span>
+              </div>
+              <OverUnder overUnder={game.overUnder} />
+              {game.overUnder.factors.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-border-gray">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-medium-gray mb-2">
+                    O/U Factors
+                  </p>
+                  <ul className="space-y-1">
+                    {game.overUnder.factors.map((factor, i) => (
+                      <li key={i} className="text-xs text-medium-gray flex items-start gap-1.5">
+                        <span className="text-medium-gray mt-0.5">&#8226;</span>
+                        {factor}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+
+            {/* Player Prop — always shown with fallback */}
+            <section className="bg-white rounded-xl border border-border-gray shadow-sm p-6">
+              <h2 className="font-teko text-lg font-bold uppercase tracking-tight text-charcoal mb-3">
+                Player Prop Pick
+              </h2>
+              {game.playerProp ? (
+                <PlayerProp prop={game.playerProp} />
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-sm text-medium-gray">
+                    No player prop data available for this game.
+                  </p>
+                  <p className="text-xs text-medium-gray/60 mt-1">
+                    Props appear when odds data is available from sportsbooks.
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <Footer />
+    </>
+  );
+}
+
+function TeamStatCard({ team, side }: { team: TeamMetrics; side: "home" | "away" }) {
+  const accentColor = side === "home" ? "text-espn-red" : "text-accent-blue";
+  const borderColor = side === "home" ? "border-espn-red/20" : "border-accent-blue/20";
+
+  return (
+    <div className={`rounded-lg border ${borderColor} p-4`}>
+      <div className="flex items-center gap-2 mb-3">
+        {team.teamLogo && (
+          <img src={team.teamLogo} alt={team.teamAbbrev} className="w-6 h-6" />
+        )}
+        <span className={`text-sm font-bold ${accentColor}`}>{team.teamAbbrev}</span>
+        <span className="text-[10px] uppercase tracking-wider text-medium-gray">
+          {side === "home" ? "Home" : "Away"}
+        </span>
+      </div>
+      <div className="space-y-2">
+        <StatRow label="Goals For / Game" value={team.goalsForPerGame.toFixed(2)} />
+        <StatRow label="Goals Against / Game" value={team.goalsAgainstPerGame.toFixed(2)} />
+        <StatRow
+          label="Goal Diff / Game"
+          value={(team.goalsForPerGame - team.goalsAgainstPerGame).toFixed(2)}
+          highlight={team.goalsForPerGame - team.goalsAgainstPerGame > 0}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StatRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-medium-gray">{label}</span>
+      <span className={`text-sm font-bold ${highlight ? "text-green-600" : "text-charcoal"}`}>
+        {value}
+      </span>
+    </div>
+  );
+}

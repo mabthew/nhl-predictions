@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model PredictionRecord {
+  id               Int      @id @default(autoincrement())
+  gameId           Int
+  gameDate         String
+  homeAbbrev       String
+  homeName         String
+  homeLogo         String
+  homeScore        Int
+  awayAbbrev       String
+  awayName         String
+  awayLogo         String
+  awayScore        Int
+  predictedWinner  String
+  actualWinner     String
+  winnerCorrect    Boolean
+  winnerConfidence Int
+  ouLine           Float
+  ouPrediction     String
+  ouProjectedTotal Float?
+  actualTotal      Int
+  ouCorrect        Boolean
+  keyFactor        String?
+  propPlayer       String?
+  propMarket       String?
+  propLine         Float?
+  propPick         String?
+  homeGoalsPerGame Float?
+  awayGoalsPerGame Float?
+  createdAt        DateTime @default(now())
+
+  @@unique([gameId, gameDate])
+  @@index([gameDate])
+}
