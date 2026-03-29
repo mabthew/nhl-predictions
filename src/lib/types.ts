@@ -1,3 +1,32 @@
+// ── NHL Team Summary Stats (from api.nhle.com/stats/rest/en/team/summary) ──
+
+export interface NHLTeamSummaryStats {
+  teamId: number;
+  teamFullName: string;
+  seasonId: number;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  otLosses: number;
+  points: number;
+  pointPct: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalsForPerGame: number;
+  goalsAgainstPerGame: number;
+  powerPlayPct: number;
+  powerPlayNetPct: number;
+  penaltyKillPct: number;
+  penaltyKillNetPct: number;
+  shotsForPerGame: number;
+  shotsAgainstPerGame: number;
+  faceoffWinPct: number;
+  winsInRegulation: number;
+  regulationAndOtWins: number;
+  winsInShootout: number;
+  teamShutouts: number;
+}
+
 // ── NHL API Types (matching real API response) ──
 
 export interface NHLScheduleResponse {
@@ -143,12 +172,14 @@ export interface TeamMetrics {
   teamName: string;
   teamLogo: string;
   teamDarkLogo?: string;
-  timeOnAttack: number;
-  shotsOnGoal: number;
-  offensiveFaceoffPct: number;
+  shotsForPerGame: number;
+  shotsAgainstPerGame: number;
+  faceoffWinPct: number;
   irImpact: number;
   powerPlayPct: number;
+  penaltyKillPct: number;
   recentForm: number;
+  goalDiffPerGame: number;
   l10Record?: string;
   goalsForPerGame: number;
   goalsAgainstPerGame: number;

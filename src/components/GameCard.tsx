@@ -119,12 +119,12 @@ export default function GameCard({ prediction }: GameCardProps) {
             </h3>
 
             <div className="mb-4">
-              <MetricBar label="Time on Attack" homeValue={homeTeam.timeOnAttack} awayValue={awayTeam.timeOnAttack} />
-              <MetricBar label="Shots on Goal" homeValue={homeTeam.shotsOnGoal} awayValue={awayTeam.shotsOnGoal} format={(v) => v.toFixed(1)} />
-              <MetricBar label="Off. Faceoff %" homeValue={homeTeam.offensiveFaceoffPct} awayValue={awayTeam.offensiveFaceoffPct} format={(v) => `${v.toFixed(0)}%`} />
-              <MetricBar label="Roster Health" homeValue={homeTeam.irImpact} awayValue={awayTeam.irImpact} />
-              <MetricBar label="Power Play %" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(0)}%`} />
-              <MetricBar label="Recent Form" homeValue={homeTeam.recentForm} awayValue={awayTeam.recentForm} />
+              <MetricBar label="Shots For / Game" homeValue={homeTeam.shotsForPerGame} awayValue={awayTeam.shotsForPerGame} format={(v) => v.toFixed(1)} />
+              <MetricBar label="Shots Against / Game" homeValue={homeTeam.shotsAgainstPerGame} awayValue={awayTeam.shotsAgainstPerGame} format={(v) => v.toFixed(1)} />
+              <MetricBar label="Power Play %" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(1)}%`} />
+              <MetricBar label="Penalty Kill %" homeValue={homeTeam.penaltyKillPct} awayValue={awayTeam.penaltyKillPct} format={(v) => `${v.toFixed(1)}%`} />
+              <MetricBar label="Faceoff Win %" homeValue={homeTeam.faceoffWinPct} awayValue={awayTeam.faceoffWinPct} format={(v) => `${v.toFixed(1)}%`} />
+              <MetricBar label="Recent Form" homeValue={homeTeam.recentForm} awayValue={awayTeam.recentForm} homeLabel={homeTeam.l10Record} awayLabel={awayTeam.l10Record} />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">

@@ -146,12 +146,13 @@ export default async function GameDetailPage({
                 <span className="text-espn-red">{homeTeam.teamAbbrev} (Home)</span>
               </div>
               <div className="space-y-1">
-                <MetricBar label="Time on Attack" homeValue={homeTeam.timeOnAttack} awayValue={awayTeam.timeOnAttack} />
-                <MetricBar label="Shots on Goal" homeValue={homeTeam.shotsOnGoal} awayValue={awayTeam.shotsOnGoal} format={(v) => v.toFixed(1)} />
-                <MetricBar label="Off. Faceoff %" homeValue={homeTeam.offensiveFaceoffPct} awayValue={awayTeam.offensiveFaceoffPct} format={(v) => `${v.toFixed(0)}%`} />
+                <MetricBar label="Shots For / Game" homeValue={homeTeam.shotsForPerGame} awayValue={awayTeam.shotsForPerGame} format={(v) => v.toFixed(1)} />
+                <MetricBar label="Shots Against / Game" homeValue={homeTeam.shotsAgainstPerGame} awayValue={awayTeam.shotsAgainstPerGame} format={(v) => v.toFixed(1)} />
+                <MetricBar label="Power Play %" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(1)}%`} />
+                <MetricBar label="Penalty Kill %" homeValue={homeTeam.penaltyKillPct} awayValue={awayTeam.penaltyKillPct} format={(v) => `${v.toFixed(1)}%`} />
+                <MetricBar label="Faceoff Win %" homeValue={homeTeam.faceoffWinPct} awayValue={awayTeam.faceoffWinPct} format={(v) => `${v.toFixed(1)}%`} />
                 <MetricBar label="Roster Health" homeValue={homeTeam.irImpact} awayValue={awayTeam.irImpact} />
-                <MetricBar label="Power Play %" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(0)}%`} />
-                <MetricBar label="Recent Form" homeValue={homeTeam.recentForm} awayValue={awayTeam.recentForm} />
+                <MetricBar label="Recent Form" homeValue={homeTeam.recentForm} awayValue={awayTeam.recentForm} homeLabel={homeTeam.l10Record} awayLabel={awayTeam.l10Record} />
               </div>
             </section>
 
@@ -192,8 +193,8 @@ export default async function GameDetailPage({
                 </div>
               </div>
               <p className="text-[10px] text-medium-gray mt-3">
-                Composite score includes home ice advantage (+3 for {homeTeam.teamAbbrev}).
-                Weights: Time on Attack 25%, Shots 22%, Faceoffs 18%, Roster Health 15%, Power Play 12%, Recent Form 8%.
+                Composite score includes home ice advantage for {homeTeam.teamAbbrev}.
+                Weights: Goal Diff 22%, Shots 15%, Recent Form 13%, PK% 12%, PP% 10%, Goalie 10%, IR Impact 10%, Shots Against 5%, Faceoffs 3%.
               </p>
             </section>
           </div>

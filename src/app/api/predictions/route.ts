@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fetchSchedule, fetchStandings, fetchClubStats } from "@/lib/nhl-api";
+import { fetchSchedule, fetchStandings, fetchClubStats, fetchTeamStats } from "@/lib/nhl-api";
 import { fetchGameOdds, fetchPlayerProps } from "@/lib/odds-api";
 import { fetchInjuries } from "@/lib/injuries";
 import { generatePredictions } from "@/lib/predictor";
@@ -15,12 +15,13 @@ export async function GET(request: Request) {
 
   try {
     // Fetch schedule + standings + injuries + odds in parallel
-    const [games, standings, injuries, odds, playerProps] = await Promise.all([
+    const [games, standings, injuries, odds, playerProps, teamStatsMap] = await Promise.all([
       fetchSchedule(targetDate),
       fetchStandings(),
       fetchInjuries(),
       fetchGameOdds(),
       fetchPlayerProps(),
+      fetchTeamStats(),
     ]);
 
     // If no games for target date and no explicit date param, try today
@@ -56,7 +57,8 @@ export async function GET(request: Request) {
       clubStatsMap,
       injuries,
       odds,
-      playerProps
+      playerProps,
+      teamStatsMap
     );
 
     const response: PredictionsResponse = {

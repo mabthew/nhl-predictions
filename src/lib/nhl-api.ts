@@ -2,11 +2,13 @@ import {
   NHLGame,
   NHLStandingsTeam,
   NHLClubStats,
+  NHLTeamSummaryStats,
   TeamMetrics,
   TopPlayer,
 } from "./types";
 
 const NHL_API_BASE = "https://api-web.nhle.com/v1";
+const NHL_STATS_API_BASE = "https://api.nhle.com/stats/rest/en";
 
 export async function fetchSchedule(date: string): Promise<NHLGame[]> {
   const res = await fetch(`${NHL_API_BASE}/schedule/${date}`, {
@@ -54,7 +56,6 @@ export async function fetchUpcomingGames(): Promise<{ date: string; games: NHLGa
 }
 
 export async function fetchStandings(): Promise<NHLStandingsTeam[]> {
-  // This endpoint returns a 307 redirect, so we follow it
   const res = await fetch(`${NHL_API_BASE}/standings/now`, {
     next: { revalidate: 180 },
     redirect: "follow",
@@ -66,6 +67,48 @@ export async function fetchStandings(): Promise<NHLStandingsTeam[]> {
 
   const data = await res.json();
   return data.standings ?? [];
+}
+
+/**
+ * Fetch pre-computed team-level stats from the NHL Stats API.
+ * Returns actual PP%, PK%, shots/game, faceoff%, etc. for all 32 teams.
+ */
+export async function fetchTeamStats(): Promise<Map<string, NHLTeamSummaryStats>> {
+  const seasonId = getCurrentSeasonId();
+  const map = new Map<string, NHLTeamSummaryStats>();
+
+  try {
+    const res = await fetch(
+      `${NHL_STATS_API_BASE}/team/summary?cayenneExp=seasonId=${seasonId}`,
+      { next: { revalidate: 180 } }
+    );
+
+    if (!res.ok) {
+      console.error(`NHL team stats API error: ${res.status}`);
+      return map;
+    }
+
+    const data = await res.json();
+    const teams: NHLTeamSummaryStats[] = data.data ?? [];
+
+    for (const team of teams) {
+      // Map team full name to stats for lookup
+      map.set(team.teamFullName, team);
+    }
+  } catch (error) {
+    console.error("Failed to fetch team stats:", error);
+  }
+
+  return map;
+}
+
+function getCurrentSeasonId(): number {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  // NHL season spans Oct-Jun: if before July, season started previous year
+  const startYear = month >= 7 ? year : year - 1;
+  return startYear * 10000 + (startYear + 1);
 }
 
 export async function fetchClubStats(
@@ -82,49 +125,6 @@ export async function fetchClubStats(
   } catch {
     return null;
   }
-}
-
-interface AggregatedTeamStats {
-  totalShots: number;
-  totalPPGoals: number;
-  totalGoals: number;
-  avgFaceoffPct: number;
-  totalTOI: number;
-  gamesPlayed: number;
-}
-
-function aggregatePlayerStats(clubStats: NHLClubStats): AggregatedTeamStats {
-  const skaters = clubStats.skaters ?? [];
-  let totalShots = 0;
-  let totalPPGoals = 0;
-  let totalGoals = 0;
-  let faceoffSum = 0;
-  let faceoffCount = 0;
-  let totalTOI = 0;
-  let maxGP = 0;
-
-  for (const s of skaters) {
-    totalShots += s.shots ?? 0;
-    totalPPGoals += s.powerPlayGoals ?? 0;
-    totalGoals += s.goals ?? 0;
-    totalTOI += (s.avgTimeOnIcePerGame ?? 0) * (s.gamesPlayed ?? 0);
-
-    if (s.faceoffWinPctg > 0) {
-      faceoffSum += s.faceoffWinPctg;
-      faceoffCount++;
-    }
-
-    if (s.gamesPlayed > maxGP) maxGP = s.gamesPlayed;
-  }
-
-  return {
-    totalShots,
-    totalPPGoals,
-    totalGoals,
-    avgFaceoffPct: faceoffCount > 0 ? faceoffSum / faceoffCount : 50,
-    totalTOI,
-    gamesPlayed: maxGP || 1,
-  };
 }
 
 export function getTopPlayers(
@@ -153,45 +153,44 @@ export function getTopPlayers(
 export function buildTeamMetrics(
   team: NHLStandingsTeam,
   clubStats: NHLClubStats | null,
-  injuries: { name: string; position: string; status: string }[]
+  injuries: { name: string; position: string; status: string }[],
+  teamSummary: NHLTeamSummaryStats | null
 ): TeamMetrics {
   const gp = team.gamesPlayed || 1;
   const goalsFor = team.goalFor / gp;
   const goalsAgainst = team.goalAgainst / gp;
 
-  let shotsPerGame = goalsFor * 10; // rough fallback
-  let faceoffPct = 50;
-  let powerPlayPct = 0;
-  let timeOnAttack = 50;
+  // Use real team stats from the NHL Stats API when available
+  let shotsForPerGame: number;
+  let shotsAgainstPerGame: number;
+  let faceoffWinPct: number;
+  let powerPlayPct: number;
+  let penaltyKillPct: number;
 
-  if (clubStats) {
-    const agg = aggregatePlayerStats(clubStats);
-    shotsPerGame = agg.totalShots / gp;
-    faceoffPct = agg.avgFaceoffPct;
-
-    // Estimate PP%: PP goals / (estimated PP opportunities ≈ 3.5/game)
-    const estPPOpps = gp * 3.5;
-    powerPlayPct = estPPOpps > 0 ? (agg.totalPPGoals / estPPOpps) * 100 : 20;
-
-    // Time on attack approximation from total TOI and shot volume
-    const avgTOIPerGame = agg.totalTOI / gp;
-    timeOnAttack =
-      (shotsPerGame / 35) * 40 +
-      (faceoffPct / 55) * 30 +
-      (avgTOIPerGame / 1000) * 30;
+  if (teamSummary) {
+    shotsForPerGame = teamSummary.shotsForPerGame;
+    shotsAgainstPerGame = teamSummary.shotsAgainstPerGame;
+    faceoffWinPct = teamSummary.faceoffWinPct * 100; // API returns 0-1, display as 0-100
+    powerPlayPct = teamSummary.powerPlayPct * 100;
+    penaltyKillPct = teamSummary.penaltyKillPct * 100;
   } else {
-    // Fallback estimates from standings data
+    // Fallback to standings-based estimates (rarely needed)
+    shotsForPerGame = 30; // league average
+    shotsAgainstPerGame = 30;
+    faceoffWinPct = 50;
     powerPlayPct = goalsFor > 3.5 ? 25 : goalsFor > 3 ? 22 : 19;
-    timeOnAttack =
-      (goalsFor / 4) * 50 + (team.winPctg ?? 0.5) * 50;
+    penaltyKillPct = goalsAgainst < 2.8 ? 82 : goalsAgainst < 3.2 ? 79 : 76;
   }
 
-  // IR impact: penalty per injured player
-  const irImpact = Math.max(0, 100 - injuries.length * 8);
+  // IR impact: weight injuries by player importance
+  const irImpact = calculateIrImpact(injuries, clubStats);
 
   // Recent form: last 10 games point percentage
   const l10Points = (team.l10Wins * 2 + team.l10OtLosses) / 20;
   const recentForm = l10Points * 100;
+
+  // Goal differential per game
+  const goalDiffPerGame = goalsFor - goalsAgainst;
 
   // Top players
   const topPlayers = clubStats ? getTopPlayers(clubStats) : [];
@@ -222,12 +221,14 @@ export function buildTeamMetrics(
     teamName: team.teamName.default,
     teamLogo: team.teamLogo,
     teamDarkLogo: team.teamLogo.replace("_light", "_dark"),
-    timeOnAttack: Math.min(100, Math.max(0, timeOnAttack)),
-    shotsOnGoal: shotsPerGame,
-    offensiveFaceoffPct: faceoffPct,
+    shotsForPerGame,
+    shotsAgainstPerGame,
+    faceoffWinPct,
     irImpact,
     powerPlayPct,
+    penaltyKillPct,
     recentForm,
+    goalDiffPerGame,
     l10Record: `${team.l10Wins}-${team.l10Losses}-${team.l10OtLosses}`,
     goalsForPerGame: goalsFor,
     goalsAgainstPerGame: goalsAgainst,
@@ -237,4 +238,62 @@ export function buildTeamMetrics(
     startingGoalieGAA,
     startingGoalieName,
   };
+}
+
+/**
+ * Calculate IR impact weighted by player importance.
+ * Uses points and TOI from club stats to weight each injured player.
+ */
+function calculateIrImpact(
+  injuries: { name: string; position: string; status: string }[],
+  clubStats: NHLClubStats | null
+): number {
+  if (injuries.length === 0) return 100;
+
+  let totalPenalty = 0;
+
+  for (const injury of injuries) {
+    const nameLower = injury.name.toLowerCase();
+    let penalty = 3; // default for unknown players
+
+    if (clubStats) {
+      // Try to find the injured player in the roster
+      const skaters = clubStats.skaters ?? [];
+      const player = skaters.find((s) => {
+        const fullName = `${s.firstName.default} ${s.lastName.default}`.toLowerCase();
+        return fullName === nameLower || fullName.includes(nameLower) || nameLower.includes(s.lastName.default.toLowerCase());
+      });
+
+      if (player) {
+        const ppg = player.gamesPlayed > 0 ? player.points / player.gamesPlayed : 0;
+        if (ppg >= 1.0) {
+          penalty = 18; // star player (PPG or above)
+        } else if (ppg >= 0.6) {
+          penalty = 12; // top-6 forward / top-4 D
+        } else if (ppg >= 0.3) {
+          penalty = 7; // middle-6 contributor
+        } else {
+          penalty = 3; // depth player
+        }
+      } else {
+        // Check if it's a goalie
+        const goalies = (clubStats as unknown as Record<string, unknown>).goalies as {
+          firstName: { default: string };
+          lastName: { default: string };
+          gamesStarted: number;
+        }[] | undefined;
+        const goalie = goalies?.find((g) => {
+          const fullName = `${g.firstName.default} ${g.lastName.default}`.toLowerCase();
+          return fullName === nameLower || nameLower.includes(g.lastName.default.toLowerCase());
+        });
+        if (goalie) {
+          penalty = goalie.gamesStarted > 20 ? 20 : 8; // starter vs backup
+        }
+      }
+    }
+
+    totalPenalty += penalty;
+  }
+
+  return Math.max(0, 100 - totalPenalty);
 }

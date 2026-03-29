@@ -5,6 +5,8 @@ interface MetricBarProps {
   homeLabel?: string;
   awayLabel?: string;
   format?: (v: number) => string;
+  /** "relative" splits bar by ratio (default). "absolute" centers at 50% for percentage stats. */
+  mode?: "relative" | "absolute";
 }
 
 export default function MetricBar({
@@ -14,10 +16,22 @@ export default function MetricBar({
   homeLabel,
   awayLabel,
   format = (v) => v.toFixed(0),
+  mode = "relative",
 }: MetricBarProps) {
-  const total = homeValue + awayValue || 1;
-  const homePct = (homeValue / total) * 100;
-  const awayPct = (awayValue / total) * 100;
+  let homePct: number;
+  let awayPct: number;
+
+  if (mode === "absolute") {
+    // For percentage stats: each side shows its own percentage relative to 100
+    // The bar visually represents each team's stat independently
+    const total = homeValue + awayValue || 1;
+    homePct = (homeValue / total) * 100;
+    awayPct = (awayValue / total) * 100;
+  } else {
+    const total = homeValue + awayValue || 1;
+    homePct = (homeValue / total) * 100;
+    awayPct = (awayValue / total) * 100;
+  }
 
   return (
     <div className="mb-3">

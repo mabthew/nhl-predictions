@@ -1,5 +1,5 @@
 import { NHLClubStats } from "./types";
-import { fetchSchedule, fetchStandings, fetchClubStats } from "./nhl-api";
+import { fetchSchedule, fetchStandings, fetchClubStats, fetchTeamStats } from "./nhl-api";
 import { fetchGameOdds, fetchPlayerProps } from "./odds-api";
 import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
@@ -142,13 +142,15 @@ export async function syncHistoryBatch(
     }
 
     try {
+      const teamStatsMap = await fetchTeamStats();
       const predictions = generatePredictions(
         completedGames,
         standings,
         clubStatsMap,
         injuries,
         odds,
-        playerProps
+        playerProps,
+        teamStatsMap
       );
 
       for (const pred of predictions) {

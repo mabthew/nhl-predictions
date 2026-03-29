@@ -1,4 +1,4 @@
-import { OddsResponse, PlayerPropPick } from "./types";
+import { OddsResponse, PlayerPropPick, NHLClubStats } from "./types";
 import { americanToImpliedProbability, formatOdds } from "./utils";
 
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4/sports";
@@ -7,7 +7,6 @@ const SPORT = "icehockey_nhl";
 function getApiKey(): string | null {
   const free = process.env.ODDS_API_KEY;
   const paid = process.env.ODDS_API_KEY_PAID;
-  // Will be set to "exhausted" once we detect the free key is out
   if (free && free !== "exhausted") return free;
   if (paid) return paid;
   return null;
@@ -39,7 +38,6 @@ async function oddsApiFetch(url: string): Promise<Response | null> {
   }
 
   if (res.status === 401 || res.status === 429) {
-    // Key rejected or rate limited — try paid key
     const paid = process.env.ODDS_API_KEY_PAID;
     if (paid && !freeKeyExhausted) {
       freeKeyExhausted = true;
@@ -158,10 +156,21 @@ export function getMoneylineOdds(
   return null;
 }
 
+// Maximum line thresholds per market — props above these are absurd
+const MAX_LINE_BY_MARKET: Record<string, number> = {
+  player_goals: 1.5,        // Over 2.5 goals is nearly impossible for any single player
+  player_assists: 2.5,      // Over 2.5 assists is very rare
+  player_shots_on_goal: 6.5, // Over 6.5 SOG is reasonable for heavy shooters
+};
+
+// Maximum odds to consider — skip extreme longshots
+const MAX_ODDS = 800;
+
 export function findBestPlayerProp(
   propData: OddsResponse[],
   homeTeam: string,
-  awayTeam: string
+  awayTeam: string,
+  clubStatsMap?: Map<string, NHLClubStats | null>
 ): PlayerPropPick | null {
   const game = propData.find(
     (g) =>
@@ -172,22 +181,61 @@ export function findBestPlayerProp(
   if (!game || game.bookmakers.length === 0) return null;
 
   let bestProp: PlayerPropPick | null = null;
-  let bestEV = 0;
+  let bestScore = -Infinity;
 
   for (const bookmaker of game.bookmakers) {
     for (const market of bookmaker.markets) {
+      const maxLine = MAX_LINE_BY_MARKET[market.key] ?? 5;
+
       for (const outcome of market.outcomes) {
         if (!outcome.point || !outcome.description) continue;
 
-        const impliedProb = americanToImpliedProbability(outcome.price);
-        // Higher odds with reasonable probability = higher EV
-        const ev =
-          outcome.price > 0
-            ? (1 / impliedProb - 1) * 0.5 - 0.5
-            : 0;
+        // Filter 1: Skip absurd lines
+        if (outcome.point > maxLine) continue;
 
-        if (ev > bestEV) {
-          bestEV = ev;
+        // Filter 2: Skip extreme longshots
+        if (outcome.price > MAX_ODDS) continue;
+
+        // Filter 3: Only consider "Over" props (more intuitive for users)
+        if (outcome.name !== "Over") continue;
+
+        const impliedProb = americanToImpliedProbability(outcome.price);
+
+        // Look up actual player stats for context
+        const playerStats = lookupPlayerStats(outcome.description, clubStatsMap);
+
+        // Calculate a scoring metric that balances value with plausibility
+        let score = 0;
+        if (outcome.price > 0) {
+          // Positive odds: potential value
+          const ev = (1 / impliedProb - 1) * 0.5 - 0.5;
+          score = ev;
+        } else {
+          // Negative odds (favorite): slight bonus for high-probability plays
+          score = impliedProb - 0.55; // only score if >55% implied
+        }
+
+        // Prefer shots on goal (more predictable) over goals (high variance)
+        if (market.key === "player_shots_on_goal") score += 0.05;
+        if (market.key === "player_assists") score += 0.02;
+
+        // Boost score if player's real average supports the line
+        if (playerStats) {
+          const marketType = market.key.replace("player_", "");
+          let perGameAvg = 0;
+          if (marketType === "goals") perGameAvg = playerStats.goalsPerGame;
+          else if (marketType === "assists") perGameAvg = playerStats.assistsPerGame;
+          else if (marketType === "shots_on_goal") perGameAvg = playerStats.shotsPerGame;
+
+          if (perGameAvg > outcome.point) {
+            score += 0.1; // player averages above the line — good sign
+          } else if (perGameAvg < outcome.point * 0.5) {
+            score -= 0.3; // player averages well below the line — skip
+          }
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
           const riskLevel =
             outcome.price >= 200
               ? "HIGH"
@@ -195,16 +243,25 @@ export function findBestPlayerProp(
                 ? "MEDIUM"
                 : "LOW";
 
+          const marketLabel = market.key.replace("player_", "").replace(/_/g, " ");
+          const recentAverage = playerStats
+            ? getPlayerMarketAvg(playerStats, market.key)
+            : outcome.point * 1.1;
+
+          const avgText = playerStats
+            ? `Averaging ${recentAverage.toFixed(1)} ${marketLabel}/game this season.`
+            : "";
+
           bestProp = {
             playerName: outcome.description,
-            market: market.key.replace("player_", "").replace(/_/g, " "),
+            market: marketLabel,
             line: outcome.point,
             odds: outcome.price,
-            recommendation: outcome.name === "Over" ? "OVER" : "UNDER",
-            recentAverage: outcome.point * 1.1, // approximation without player stats
+            recommendation: "OVER",
+            recentAverage,
             riskLevel: riskLevel as "HIGH" | "MEDIUM" | "LOW",
-            expectedValue: Math.round(ev * 100) / 100,
-            justification: `${outcome.description} ${outcome.name} ${outcome.point} ${market.key.replace("player_", "").replace(/_/g, " ")} at ${formatOdds(outcome.price)}. ${riskLevel} risk with potential value based on odds divergence.`,
+            expectedValue: Math.round(bestScore * 100) / 100,
+            justification: `${outcome.description} Over ${outcome.point} ${marketLabel} at ${formatOdds(outcome.price)}. ${avgText} ${riskLevel} risk with potential value based on odds analysis.`.trim(),
           };
         }
       }
@@ -212,6 +269,47 @@ export function findBestPlayerProp(
   }
 
   return bestProp;
+}
+
+interface PlayerStatSummary {
+  goalsPerGame: number;
+  assistsPerGame: number;
+  shotsPerGame: number;
+  gamesPlayed: number;
+}
+
+function lookupPlayerStats(
+  playerName: string,
+  clubStatsMap?: Map<string, NHLClubStats | null>
+): PlayerStatSummary | null {
+  if (!clubStatsMap) return null;
+
+  const nameLower = playerName.toLowerCase().trim();
+
+  for (const [, clubStats] of clubStatsMap) {
+    if (!clubStats) continue;
+    for (const skater of clubStats.skaters ?? []) {
+      const fullName = `${skater.firstName.default} ${skater.lastName.default}`.toLowerCase();
+      if (fullName === nameLower || nameLower.includes(skater.lastName.default.toLowerCase())) {
+        const gp = skater.gamesPlayed || 1;
+        return {
+          goalsPerGame: skater.goals / gp,
+          assistsPerGame: skater.assists / gp,
+          shotsPerGame: skater.shots / gp,
+          gamesPlayed: skater.gamesPlayed,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function getPlayerMarketAvg(stats: PlayerStatSummary, marketKey: string): number {
+  if (marketKey === "player_goals") return stats.goalsPerGame;
+  if (marketKey === "player_assists") return stats.assistsPerGame;
+  if (marketKey === "player_shots_on_goal") return stats.shotsPerGame;
+  return 0;
 }
 
 function findGameOdds(

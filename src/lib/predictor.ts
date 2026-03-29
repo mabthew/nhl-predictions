@@ -3,6 +3,7 @@ import {
   NHLGame,
   NHLStandingsTeam,
   NHLClubStats,
+  NHLTeamSummaryStats,
   OverUnderPrediction,
   TeamMetrics,
   InjuryReport,
@@ -14,18 +15,51 @@ import {
   findBestPlayerProp,
 } from "./odds-api";
 import { getTeamInjuries, TEAM_NAMES } from "./injuries";
-import { clamp, normalize } from "./utils";
+import { clamp } from "./utils";
 
+// Revised weights based on hockey analytics research:
+// - Goal differential is the most predictive single team stat
+// - Shots/game correlates with scoring chances
+// - PK% is a critical defensive metric (was missing entirely)
+// - Faceoff% has very weak correlation with winning (r < 0.1), downweighted
+// - Goalie quality has the highest single-game variance
 const WEIGHTS = {
-  timeOnAttack: 0.25,
-  shotsOnGoal: 0.22,
-  offensiveFaceoffPct: 0.18,
-  irImpact: 0.15,
-  powerPlayPct: 0.12,
-  recentForm: 0.08,
+  goalDiffPerGame: 0.22,
+  shotsForPerGame: 0.15,
+  penaltyKillPct: 0.12,
+  powerPlayPct: 0.10,
+  recentForm: 0.13,
+  irImpact: 0.10,
+  goalie: 0.10,
+  faceoffWinPct: 0.03,
+  shotsAgainstPerGame: 0.05,
 };
 
-const HOME_ICE_BONUS = 3;
+// League average baselines for normalization (2024-25 season)
+const LEAGUE_AVG = {
+  goalDiffPerGame: 0,
+  shotsForPerGame: 30,
+  shotsAgainstPerGame: 30,
+  faceoffWinPct: 50,
+  powerPlayPct: 22,
+  penaltyKillPct: 80,
+  recentForm: 50,
+  irImpact: 85,
+  goalieSavePct: 0.905,
+};
+
+// Standard deviations for z-score normalization
+const LEAGUE_SD = {
+  goalDiffPerGame: 0.5,
+  shotsForPerGame: 3,
+  shotsAgainstPerGame: 3,
+  faceoffWinPct: 2.5,
+  powerPlayPct: 4,
+  penaltyKillPct: 4,
+  recentForm: 18,
+  irImpact: 15,
+  goalieSavePct: 0.012,
+};
 
 export function generatePredictions(
   games: NHLGame[],
@@ -33,7 +67,8 @@ export function generatePredictions(
   clubStatsMap: Map<string, NHLClubStats | null>,
   injuries: InjuryReport[],
   odds: OddsResponse[],
-  playerProps: OddsResponse[]
+  playerProps: OddsResponse[],
+  teamStatsMap: Map<string, NHLTeamSummaryStats>
 ): GamePrediction[] {
   const teamMetricsMap = new Map<string, TeamMetrics>();
 
@@ -50,15 +85,13 @@ export function generatePredictions(
       const teamFullName = TEAM_NAMES[abbrev] ?? standing.teamName.default;
       const teamInjuries = getTeamInjuries(injuries, teamFullName);
       const clubStats = clubStatsMap.get(abbrev) ?? null;
-      const metrics = buildTeamMetrics(standing, clubStats, teamInjuries);
+
+      // Look up pre-computed team stats by full name
+      const teamSummary = findTeamSummary(teamStatsMap, teamFullName);
+
+      const metrics = buildTeamMetrics(standing, clubStats, teamInjuries, teamSummary);
       teamMetricsMap.set(abbrev, metrics);
     }
-  }
-
-  // Normalize metrics across all teams in today's slate
-  const allMetrics = Array.from(teamMetricsMap.values());
-  if (allMetrics.length > 0) {
-    normalizeAllMetrics(allMetrics);
   }
 
   return games.map((game) => {
@@ -69,13 +102,12 @@ export function generatePredictions(
       return createFallbackPrediction(game);
     }
 
-    homeMetrics.compositeScore = calculateComposite(homeMetrics);
-    awayMetrics.compositeScore = calculateComposite(awayMetrics);
+    homeMetrics.compositeScore = calculateComposite(homeMetrics, true);
+    awayMetrics.compositeScore = calculateComposite(awayMetrics, false);
 
-    const delta =
-      homeMetrics.compositeScore + HOME_ICE_BONUS - awayMetrics.compositeScore;
+    const delta = homeMetrics.compositeScore - awayMetrics.compositeScore;
     const predictedWinner: "home" | "away" = delta >= 0 ? "home" : "away";
-    const winnerConfidence = clamp(50 + Math.abs(delta) * 2.5, 50, 95);
+    const winnerConfidence = clamp(50 + Math.abs(delta) * 3, 50, 95);
 
     const homeName = `${game.homeTeam.placeName.default} ${game.homeTeam.commonName.default}`;
     const awayName = `${game.awayTeam.placeName.default} ${game.awayTeam.commonName.default}`;
@@ -88,7 +120,7 @@ export function generatePredictions(
       awayName
     );
 
-    const playerProp = findBestPlayerProp(playerProps, homeName, awayName);
+    const playerProp = findBestPlayerProp(playerProps, homeName, awayName, clubStatsMap);
 
     const keyFactors = generateKeyFactors(
       homeMetrics,
@@ -113,35 +145,76 @@ export function generatePredictions(
   });
 }
 
-function calculateComposite(metrics: TeamMetrics): number {
-  return (
-    metrics.timeOnAttack * WEIGHTS.timeOnAttack +
-    metrics.shotsOnGoal * WEIGHTS.shotsOnGoal +
-    metrics.offensiveFaceoffPct * WEIGHTS.offensiveFaceoffPct +
-    metrics.irImpact * WEIGHTS.irImpact +
-    metrics.powerPlayPct * WEIGHTS.powerPlayPct +
-    metrics.recentForm * WEIGHTS.recentForm
-  );
-}
+/**
+ * Find team summary stats by name, handling slight naming differences.
+ */
+function findTeamSummary(
+  teamStatsMap: Map<string, NHLTeamSummaryStats>,
+  teamFullName: string
+): NHLTeamSummaryStats | null {
+  // Direct lookup
+  const direct = teamStatsMap.get(teamFullName);
+  if (direct) return direct;
 
-function normalizeAllMetrics(allMetrics: TeamMetrics[]) {
-  const fields: (keyof TeamMetrics)[] = [
-    "timeOnAttack",
-    "shotsOnGoal",
-    "offensiveFaceoffPct",
-    "powerPlayPct",
-    "recentForm",
-  ];
-
-  for (const field of fields) {
-    const values = allMetrics.map((m) => m[field] as number);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-
-    for (const m of allMetrics) {
-      (m[field] as number) = normalize(m[field] as number, min, max);
+  // Fuzzy match: try partial name matching
+  const nameLower = teamFullName.toLowerCase();
+  for (const [key, value] of teamStatsMap) {
+    if (
+      key.toLowerCase().includes(nameLower) ||
+      nameLower.includes(key.toLowerCase())
+    ) {
+      return value;
     }
   }
+
+  return null;
+}
+
+/**
+ * Normalize a metric to a 0-100 scale using league-wide z-scores.
+ * This ensures scores are consistent regardless of which teams are playing today.
+ */
+function zScoreNormalize(value: number, avg: number, sd: number, invert = false): number {
+  const z = (value - avg) / sd;
+  const adjusted = invert ? -z : z;
+  // Map z-score to 0-100: z=0 → 50, z=+2 → ~90, z=-2 → ~10
+  return clamp(50 + adjusted * 20, 0, 100);
+}
+
+function calculateComposite(metrics: TeamMetrics, isHome: boolean): number {
+  // Normalize each metric to 0-100 using league baselines
+  const goalDiffScore = zScoreNormalize(metrics.goalDiffPerGame, LEAGUE_AVG.goalDiffPerGame, LEAGUE_SD.goalDiffPerGame);
+  const shotsForScore = zScoreNormalize(metrics.shotsForPerGame, LEAGUE_AVG.shotsForPerGame, LEAGUE_SD.shotsForPerGame);
+  const shotsAgainstScore = zScoreNormalize(metrics.shotsAgainstPerGame, LEAGUE_AVG.shotsAgainstPerGame, LEAGUE_SD.shotsAgainstPerGame, true); // invert: fewer shots against = better
+  const faceoffScore = zScoreNormalize(metrics.faceoffWinPct, LEAGUE_AVG.faceoffWinPct, LEAGUE_SD.faceoffWinPct);
+  const ppScore = zScoreNormalize(metrics.powerPlayPct, LEAGUE_AVG.powerPlayPct, LEAGUE_SD.powerPlayPct);
+  const pkScore = zScoreNormalize(metrics.penaltyKillPct, LEAGUE_AVG.penaltyKillPct, LEAGUE_SD.penaltyKillPct);
+  const formScore = zScoreNormalize(metrics.recentForm, LEAGUE_AVG.recentForm, LEAGUE_SD.recentForm);
+  const irScore = zScoreNormalize(metrics.irImpact, LEAGUE_AVG.irImpact, LEAGUE_SD.irImpact);
+
+  // Goalie score
+  let goalieScore = 50; // default to average
+  if (metrics.startingGoalieSavePct) {
+    goalieScore = zScoreNormalize(metrics.startingGoalieSavePct, LEAGUE_AVG.goalieSavePct, LEAGUE_SD.goalieSavePct);
+  }
+
+  let composite =
+    goalDiffScore * WEIGHTS.goalDiffPerGame +
+    shotsForScore * WEIGHTS.shotsForPerGame +
+    shotsAgainstScore * WEIGHTS.shotsAgainstPerGame +
+    faceoffScore * WEIGHTS.faceoffWinPct +
+    ppScore * WEIGHTS.powerPlayPct +
+    pkScore * WEIGHTS.penaltyKillPct +
+    formScore * WEIGHTS.recentForm +
+    irScore * WEIGHTS.irImpact +
+    goalieScore * WEIGHTS.goalie;
+
+  // Home ice advantage: ~54% historical home win rate → +2 points
+  if (isHome) {
+    composite += 2;
+  }
+
+  return composite;
 }
 
 function predictOverUnder(
@@ -167,10 +240,12 @@ function predictOverUnder(
 
   const factors: string[] = [];
 
-  if (home.shotsOnGoal > 60 || away.shotsOnGoal > 60) {
+  // Use realistic thresholds (NHL average ~30 shots/game)
+  if (home.shotsForPerGame > 33 || away.shotsForPerGame > 33) {
     factors.push("High shot volume suggests an up-tempo game");
   }
-  if (home.powerPlayPct > 60 || away.powerPlayPct > 60) {
+  // NHL average PP% is ~22%
+  if (home.powerPlayPct > 26 || away.powerPlayPct > 26) {
     factors.push("Strong power play conversion could boost scoring");
   }
   if (home.goalsForPerGame + away.goalsForPerGame > 6.5) {
@@ -179,8 +254,9 @@ function predictOverUnder(
   if (home.goalsAgainstPerGame + away.goalsAgainstPerGame < 5) {
     factors.push("Strong defensive teams could keep scoring low");
   }
-  if (home.timeOnAttack > 60 && away.timeOnAttack > 60) {
-    factors.push("Both teams with high offensive zone time");
+  // Weak PK% means more power play goals
+  if (home.penaltyKillPct < 76 || away.penaltyKillPct < 76) {
+    factors.push("Weak penalty kill could lead to extra power play goals");
   }
 
   if (factors.length === 0) {
@@ -223,39 +299,46 @@ function generateKeyFactors(
     );
   }
 
-  // Shot volume
-  if (w.shotsOnGoal > l.shotsOnGoal + 5) {
+  // Shot volume (realistic threshold: ~3-4 shots difference is meaningful)
+  if (w.shotsForPerGame > l.shotsForPerGame + 3) {
     factors.push(
-      `${w.teamAbbrev} out-shoots opponents with ${w.shotsOnGoal.toFixed(0)} shots/game vs ${l.shotsOnGoal.toFixed(0)}`
+      `${w.teamAbbrev} generates ${w.shotsForPerGame.toFixed(1)} shots/game vs ${l.teamAbbrev}'s ${l.shotsForPerGame.toFixed(1)}`
     );
   }
 
-  // Faceoffs
-  if (w.offensiveFaceoffPct > l.offensiveFaceoffPct + 5) {
+  // Faceoffs (only mention if large gap — faceoffs weakly correlate with winning)
+  if (w.faceoffWinPct > l.faceoffWinPct + 3) {
     factors.push(
-      `${w.teamAbbrev} controls possession with a ${w.offensiveFaceoffPct.toFixed(0)}% offensive faceoff rate vs ${l.offensiveFaceoffPct.toFixed(0)}%`
+      `${w.teamAbbrev} wins ${w.faceoffWinPct.toFixed(1)}% of faceoffs vs ${l.teamAbbrev}'s ${l.faceoffWinPct.toFixed(1)}%`
     );
   }
 
-  // Time on attack
-  if (w.timeOnAttack > l.timeOnAttack + 5) {
+  // Power play (realistic: 3-5% difference is meaningful)
+  if (w.powerPlayPct > l.powerPlayPct + 3) {
     factors.push(
-      `${w.teamAbbrev} spends more time in the offensive zone (${w.timeOnAttack.toFixed(0)} vs ${l.timeOnAttack.toFixed(0)} attack rating)`
+      `${w.teamAbbrev}'s power play converts at ${w.powerPlayPct.toFixed(1)}%, compared to ${l.teamAbbrev}'s ${l.powerPlayPct.toFixed(1)}%`
     );
   }
 
-  // Power play
-  if (w.powerPlayPct > l.powerPlayPct + 5) {
+  // Penalty kill
+  if (w.penaltyKillPct > l.penaltyKillPct + 3) {
     factors.push(
-      `${w.teamAbbrev}'s power play converts at ${w.powerPlayPct.toFixed(0)}%, compared to ${l.teamAbbrev}'s ${l.powerPlayPct.toFixed(0)}%`
+      `${w.teamAbbrev}'s penalty kill at ${w.penaltyKillPct.toFixed(1)}% is stronger than ${l.teamAbbrev}'s ${l.penaltyKillPct.toFixed(1)}%`
+    );
+  }
+
+  // Weak PK for the loser
+  if (l.penaltyKillPct < 76) {
+    factors.push(
+      `${l.teamAbbrev}'s penalty kill at ${l.penaltyKillPct.toFixed(1)}% is a liability`
     );
   }
 
   // Injuries
   if (l.irImpact < 80) {
-    const injuryCount = Math.round((100 - l.irImpact) / 8);
+    const injurySeverity = l.irImpact < 60 ? "significant" : "notable";
     factors.push(
-      `${l.teamAbbrev} weakened with ~${injuryCount} key players on injured reserve`
+      `${l.teamAbbrev} has ${injurySeverity} injuries impacting their roster`
     );
   }
 
@@ -273,24 +356,10 @@ function generateKeyFactors(
     );
   }
 
-  // Loser defensive weakness
-  if (l.goalsAgainstPerGame > w.goalsAgainstPerGame + 0.5) {
-    factors.push(
-      `${l.teamAbbrev} leaking goals at ${l.goalsAgainstPerGame.toFixed(1)}/game, a defensive liability`
-    );
-  }
-
-  // Loser weak power play
-  if (l.powerPlayPct < 15 && w.powerPlayPct > l.powerPlayPct + 5) {
-    factors.push(
-      `${l.teamAbbrev}'s power play converting at just ${l.powerPlayPct.toFixed(0)}%, struggling to capitalize`
-    );
-  }
-
   // Home ice
   if (winner === "home") {
     factors.push(
-      `${w.teamAbbrev} playing at home with a +3 composite score boost`
+      `${w.teamAbbrev} playing at home with a historical ~54% home win rate advantage`
     );
   }
 
@@ -308,11 +377,9 @@ function generateKeyFactors(
   }
 
   // Goal differential
-  const wDiff = w.goalsForPerGame - w.goalsAgainstPerGame;
-  const lDiff = l.goalsForPerGame - l.goalsAgainstPerGame;
-  if (wDiff > lDiff + 0.2) {
+  if (w.goalDiffPerGame > l.goalDiffPerGame + 0.2) {
     factors.push(
-      `${w.teamAbbrev} has a stronger goal differential (${wDiff > 0 ? "+" : ""}${wDiff.toFixed(2)}/game vs ${lDiff > 0 ? "+" : ""}${lDiff.toFixed(2)})`
+      `${w.teamAbbrev} has a stronger goal differential (${w.goalDiffPerGame > 0 ? "+" : ""}${w.goalDiffPerGame.toFixed(2)}/game vs ${l.goalDiffPerGame > 0 ? "+" : ""}${l.goalDiffPerGame.toFixed(2)})`
     );
   }
 
@@ -340,12 +407,14 @@ function createFallbackPrediction(game: NHLGame): GamePrediction {
       teamAbbrev: game.homeTeam.abbrev,
       teamName: homeName,
       teamLogo: game.homeTeam.logo,
-      timeOnAttack: 50,
-      shotsOnGoal: 50,
-      offensiveFaceoffPct: 50,
+      shotsForPerGame: 30,
+      shotsAgainstPerGame: 30,
+      faceoffWinPct: 50,
       irImpact: 100,
-      powerPlayPct: 50,
+      powerPlayPct: 21,
+      penaltyKillPct: 80,
       recentForm: 50,
+      goalDiffPerGame: 0,
       goalsForPerGame: 3,
       goalsAgainstPerGame: 3,
       compositeScore: 50,
@@ -354,12 +423,14 @@ function createFallbackPrediction(game: NHLGame): GamePrediction {
       teamAbbrev: game.awayTeam.abbrev,
       teamName: awayName,
       teamLogo: game.awayTeam.logo,
-      timeOnAttack: 50,
-      shotsOnGoal: 50,
-      offensiveFaceoffPct: 50,
+      shotsForPerGame: 30,
+      shotsAgainstPerGame: 30,
+      faceoffWinPct: 50,
       irImpact: 100,
-      powerPlayPct: 50,
+      powerPlayPct: 21,
+      penaltyKillPct: 80,
       recentForm: 50,
+      goalDiffPerGame: 0,
       goalsForPerGame: 3,
       goalsAgainstPerGame: 3,
       compositeScore: 50,

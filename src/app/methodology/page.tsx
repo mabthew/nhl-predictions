@@ -4,20 +4,24 @@ import Footer from "@/components/Footer";
 import FeedbackButton from "@/components/FeedbackButton";
 
 const WEIGHTS = [
-  { pct: 25, label: "Time on Attack", desc: "How much time a team spends in the offensive zone, creating scoring chances." },
-  { pct: 22, label: "Shots on Goal", desc: "Average shots on goal per game. More shots generally means more opportunities to score." },
-  { pct: 18, label: "Offensive Faceoff Win %", desc: "Percentage of faceoffs won in the offensive zone, which drives possession and pressure." },
-  { pct: 15, label: "Roster Health", desc: "Impact of injured reserve players. Teams missing key players get penalized." },
-  { pct: 12, label: "Power Play Conversion Rate", desc: "How efficiently a team converts power play opportunities into goals." },
-  { pct: 8, label: "Last 10 Games Record", desc: "Recent form based on the last 10 games played. Hot streaks and slumps matter." },
+  { pct: 22, label: "Goal Differential", desc: "Per-game goal differential (GF - GA). The most predictive single stat in hockey for measuring overall team quality." },
+  { pct: 15, label: "Shots For Per Game", desc: "Average shots on goal generated per game. More shots means more scoring opportunities and offensive zone pressure." },
+  { pct: 13, label: "Recent Form (L10)", desc: "Point percentage over the last 10 games. Captures current momentum, hot/cold streaks, and recent lineup changes." },
+  { pct: 12, label: "Penalty Kill %", desc: "Percentage of opponent power plays successfully killed. A strong PK prevents easy goals and is a repeatable team skill." },
+  { pct: 10, label: "Power Play %", desc: "Conversion rate on power play opportunities. A real but high-variance factor — elite teams convert 25-30%, league average is ~21%." },
+  { pct: 10, label: "Goalie Quality", desc: "Starting goalie save percentage. Goaltending has the highest single-game impact of any position in hockey." },
+  { pct: 10, label: "Roster Health", desc: "Impact of injuries weighted by player importance. A missing star player hurts far more than a depth player." },
+  { pct: 5, label: "Shots Against Per Game", desc: "Average shots allowed per game. Fewer shots against indicates better defensive structure and puck possession." },
+  { pct: 3, label: "Faceoff Win %", desc: "Team faceoff win rate. Despite popular belief, research shows faceoff% has a very weak correlation with winning." },
 ];
 
 const ADDITIONAL_FACTORS = [
-  { label: "Goaltending", desc: "Starting goalie save percentage and goals against average. A hot goalie can single-handedly steal a game." },
   { label: "Scoring Output", desc: "Goals per game averages for each team. Teams that consistently put up numbers have a clear advantage." },
   { label: "Defensive Strength", desc: "Goals allowed per game. Low-event teams that limit chances are harder to beat." },
   { label: "Goal Differential", desc: "Net goals per game. The most reliable single-number indicator of team quality." },
-  { label: "Home Ice Advantage", desc: "Home teams receive a +3 composite score boost. Last change, crowd energy, and familiar ice all matter." },
+  { label: "Home Ice Advantage", desc: "Home teams historically win ~54% of NHL games. The advantage comes from last change, crowd energy, and familiar ice." },
+  { label: "Goaltending Matchup", desc: "Starting goalie save percentage and GAA. A hot goalie can single-handedly steal a game." },
+  { label: "Special Teams", desc: "Power play and penalty kill differentials. Games with more penalties amplify special teams advantages." },
 ];
 
 export default function AboutPage() {
@@ -39,8 +43,9 @@ export default function AboutPage() {
           How Predictions Work
         </h1>
         <p className="text-sm text-medium-gray mb-8">
-          Every game prediction is built from six weighted factors derived from
-          real NHL data. Here's what goes into each pick.
+          Every game prediction is built from nine weighted factors derived from
+          real NHL data. Stats are sourced directly from the NHL Stats API — actual
+          team-level power play %, penalty kill %, shots per game, and faceoff win rates.
         </p>
 
         <div className="space-y-4 mb-10">
@@ -61,10 +66,10 @@ export default function AboutPage() {
         </div>
 
         <h2 className="font-teko text-2xl font-bold text-charcoal uppercase tracking-tight mb-4">
-          Additional Factors
+          Key Factor Analysis
         </h2>
         <p className="text-sm text-medium-gray mb-4">
-          Beyond the weighted composite score, our key factor analysis also considers:
+          Beyond the weighted composite score, our key factor analysis highlights the biggest edges:
         </p>
         <div className="space-y-3 mb-10">
           {ADDITIONAL_FACTORS.map((f) => (
@@ -105,7 +110,8 @@ export default function AboutPage() {
             </div>
           </div>
           <p className="text-[10px] text-white/30 mt-4">
-            Home ice advantage adds +3 to the home team's composite score.
+            Home ice advantage adds ~2 points to the home team's composite score, reflecting the ~54% historical home win rate.
+            All metrics are normalized using league-wide z-scores for consistency across game slates.
           </p>
         </div>
 

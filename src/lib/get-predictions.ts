@@ -1,18 +1,19 @@
-import { NHLClubStats, NHLGame, PredictionsResponse } from "./types";
-import { fetchUpcomingGames, fetchStandings, fetchClubStats } from "./nhl-api";
+import { NHLClubStats, NHLGame, NHLTeamSummaryStats, PredictionsResponse } from "./types";
+import { fetchUpcomingGames, fetchStandings, fetchClubStats, fetchTeamStats } from "./nhl-api";
 import { fetchGameOdds, fetchPlayerProps } from "./odds-api";
 import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
 
 export async function getPredictions(): Promise<PredictionsResponse | null> {
   try {
-    const [upcomingDays, standings, injuries, odds, playerProps] =
+    const [upcomingDays, standings, injuries, odds, playerProps, teamStatsMap] =
       await Promise.all([
         fetchUpcomingGames(),
         fetchStandings(),
         fetchInjuries(),
         fetchGameOdds(),
         fetchPlayerProps(),
+        fetchTeamStats(),
       ]);
 
     // Take games from the first two days that have upcoming games
@@ -48,7 +49,8 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
       clubStatsMap,
       injuries,
       odds,
-      playerProps
+      playerProps,
+      teamStatsMap
     );
 
     return {
