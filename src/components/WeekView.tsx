@@ -16,6 +16,8 @@ const TIER_BANNERS: Partial<Record<ForecastTier, string>> = {
     "Based on season statistics. Odds, lineups, and injuries may change significantly before game time.",
 };
 
+const LIVE_BANNER = "Games in progress — pre-game analysis and picks are locked in. Scores update every few minutes.";
+
 function getToday(): string {
   // Use local timezone, not UTC — so "today" matches the user's actual date
   const now = new Date();
@@ -107,6 +109,8 @@ export default function WeekView({ predictions }: WeekViewProps) {
           const tier = games[0].forecastTier;
           const banner = TIER_BANNERS[tier];
 
+          const hasLiveGames = games.some((g) => g.gameStatus === "live");
+
           return (
             <section
               key={date}
@@ -121,7 +125,14 @@ export default function WeekView({ predictions }: WeekViewProps) {
                 isToday={date === today}
               />
 
-              {banner && (
+              {hasLiveGames && (
+                <div className="flex items-start gap-2 bg-espn-red/5 border-l-4 border-espn-red rounded-r-lg px-4 py-3 mb-4">
+                  <span className="h-2.5 w-2.5 rounded-full bg-espn-red header-pulse flex-none mt-0.5" />
+                  <p className="text-xs text-espn-red font-medium">{LIVE_BANNER}</p>
+                </div>
+              )}
+
+              {!hasLiveGames && banner && (
                 <div className="flex items-start gap-2 bg-accent-blue/5 border-l-4 border-accent-blue rounded-r-lg px-4 py-3 mb-4">
                   <svg
                     className="w-4 h-4 text-accent-blue flex-none mt-0.5"

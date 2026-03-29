@@ -5,7 +5,14 @@ import {
   NHLTeamSummaryStats,
   TeamMetrics,
   TopPlayer,
+  BoxScoreData,
+  BoxScorePlayer,
+  BoxScoreGoalie,
+  PlayerProfile,
+  PlayerSeasonStats,
+  PlayerAward,
 } from "./types";
+import { TeamLineCombos } from "./daily-faceoff";
 
 const NHL_API_BASE = "https://api-web.nhle.com/v1";
 const NHL_STATS_API_BASE = "https://api.nhle.com/stats/rest/en";
@@ -31,7 +38,10 @@ export async function fetchSchedule(date: string): Promise<NHLGame[]> {
   }));
 }
 
-/** Fetch upcoming (FUT) games from the current week — no timezone dependency */
+// Game states that should be shown on the predictions page
+const VISIBLE_GAME_STATES = new Set(["FUT", "PRE", "LIVE", "CRIT"]);
+
+/** Fetch upcoming + live games from the current week */
 export async function fetchUpcomingGames(): Promise<{ date: string; games: NHLGame[] }[]> {
   const res = await fetch(`${NHL_API_BASE}/schedule/now`, {
     next: { revalidate: 180 },
@@ -49,10 +59,49 @@ export async function fetchUpcomingGames(): Promise<{ date: string; games: NHLGa
     .map((day) => ({
       date: day.date,
       games: day.games
-        .filter((g) => g.gameState === "FUT")
+        .filter((g) => VISIBLE_GAME_STATES.has(g.gameState))
         .map((g) => ({ ...g, gameDate: day.date })),
     }))
     .filter((day) => day.games.length > 0);
+}
+
+/** Fetch live scores for all in-progress games */
+export async function fetchLiveScores(): Promise<Map<number, { homeScore: number; awayScore: number; period: number; periodLabel: string; timeRemaining: string; homeSog: number; awaySog: number }>> {
+  const map = new Map<number, { homeScore: number; awayScore: number; period: number; periodLabel: string; timeRemaining: string; homeSog: number; awaySog: number }>();
+
+  try {
+    const res = await fetch(`${NHL_API_BASE}/score/now`, {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return map;
+
+    const data = await res.json();
+    const games = data.games ?? [];
+
+    for (const game of games) {
+      if (game.gameState === "LIVE" || game.gameState === "CRIT") {
+        const period = game.periodDescriptor?.number ?? 0;
+        const periodType = game.periodDescriptor?.periodType ?? "REG";
+        let periodLabel = `P${period}`;
+        if (periodType === "OT") periodLabel = period > 3 ? `${period - 3}OT` : "OT";
+        if (periodType === "SO") periodLabel = "SO";
+
+        map.set(game.id, {
+          homeScore: game.homeTeam?.score ?? 0,
+          awayScore: game.awayTeam?.score ?? 0,
+          period,
+          periodLabel,
+          timeRemaining: game.clock?.timeRemaining ?? "",
+          homeSog: game.homeTeam?.sog ?? 0,
+          awaySog: game.awayTeam?.sog ?? 0,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Failed to fetch live scores:", error);
+  }
+
+  return map;
 }
 
 export async function fetchStandings(): Promise<NHLStandingsTeam[]> {
@@ -154,7 +203,8 @@ export function buildTeamMetrics(
   team: NHLStandingsTeam,
   clubStats: NHLClubStats | null,
   injuries: { name: string; position: string; status: string }[],
-  teamSummary: NHLTeamSummaryStats | null
+  teamSummary: NHLTeamSummaryStats | null,
+  lineCombos?: TeamLineCombos | null
 ): TeamMetrics {
   const gp = team.gamesPlayed || 1;
   const goalsFor = team.goalFor / gp;
@@ -182,8 +232,8 @@ export function buildTeamMetrics(
     penaltyKillPct = goalsAgainst < 2.8 ? 82 : goalsAgainst < 3.2 ? 79 : 76;
   }
 
-  // IR impact: weight injuries by player importance
-  const irImpact = calculateIrImpact(injuries, clubStats);
+  // IR impact: weight injuries by player importance (enhanced with line combo data)
+  const irImpact = calculateIrImpact(injuries, clubStats, lineCombos);
 
   // Recent form: last 10 games point percentage
   const l10Points = (team.l10Wins * 2 + team.l10OtLosses) / 20;
@@ -242,11 +292,12 @@ export function buildTeamMetrics(
 
 /**
  * Calculate IR impact weighted by player importance.
- * Uses points and TOI from club stats to weight each injured player.
+ * Uses line combo data (when available) + points/TOI from club stats to weight each injured player.
  */
 function calculateIrImpact(
   injuries: { name: string; position: string; status: string }[],
-  clubStats: NHLClubStats | null
+  clubStats: NHLClubStats | null,
+  lineCombos?: TeamLineCombos | null
 ): number {
   if (injuries.length === 0) return 100;
 
@@ -256,8 +307,19 @@ function calculateIrImpact(
     const nameLower = injury.name.toLowerCase();
     let penalty = 3; // default for unknown players
 
+    // First try to determine penalty from line combo data (more accurate)
+    if (lineCombos) {
+      const linePosition = findPlayerLinePosition(nameLower, lineCombos);
+      if (linePosition !== null) {
+        penalty = linePosition;
+        // Skip the PPG-based fallback since we have line data
+        totalPenalty += penalty;
+        continue;
+      }
+    }
+
     if (clubStats) {
-      // Try to find the injured player in the roster
+      // Fallback: use PPG-based estimation
       const skaters = clubStats.skaters ?? [];
       const player = skaters.find((s) => {
         const fullName = `${s.firstName.default} ${s.lastName.default}`.toLowerCase();
@@ -296,4 +358,190 @@ function calculateIrImpact(
   }
 
   return Math.max(0, 100 - totalPenalty);
+}
+
+/**
+ * Find an injured player's line position and return the appropriate penalty.
+ * Returns null if player not found in line data.
+ */
+function findPlayerLinePosition(nameLower: string, lineCombos: TeamLineCombos): number | null {
+  for (const line of lineCombos.lines) {
+    for (const player of line.players) {
+      const playerNameLower = player.name.toLowerCase();
+      if (playerNameLower === nameLower || nameLower.includes(playerNameLower) || playerNameLower.includes(nameLower)) {
+        const group = line.groupName.toLowerCase();
+        if (group.includes("1st")) return 20; // 1st line/pair
+        if (group.includes("2nd")) return 14; // 2nd line/pair
+        if (group.includes("3rd")) return 7;  // 3rd line/pair
+        if (group.includes("4th")) return 3;  // 4th line
+        return 7; // default if line number unclear
+      }
+    }
+  }
+  return null;
+}
+
+/** Fetch box score for a specific game */
+export async function fetchBoxScore(gameId: number): Promise<BoxScoreData | null> {
+  try {
+    const res = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`, {
+      next: { revalidate: 30 },
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    const gameState = data.gameState ?? "FUT";
+    // Only return box score for live or completed games
+    if (gameState === "FUT" || gameState === "PRE") return null;
+
+    const period = data.periodDescriptor?.number ?? 0;
+    const periodType = data.periodDescriptor?.periodType ?? "REG";
+    let periodLabel = `P${period}`;
+    if (periodType === "OT") periodLabel = period > 3 ? `${period - 3}OT` : "OT";
+    if (periodType === "SO") periodLabel = "SO";
+
+    function parseTeamBoxScore(teamData: Record<string, unknown>, side: "away" | "home") {
+      const teamObj = (data as Record<string, unknown>)[side === "away" ? "awayTeam" : "homeTeam"] as Record<string, unknown> | undefined;
+      const abbrev = ((teamObj?.abbrev as string) ?? "").toString();
+      const score = (teamObj?.score as number) ?? 0;
+      const sog = (teamObj?.sog as number) ?? 0;
+
+      // Parse player stats from playerByGameStats
+      const playerStats = data.playerByGameStats ?? {};
+      const teamPlayerStats = (playerStats as Record<string, unknown>)[side === "away" ? "awayTeam" : "homeTeam"] as Record<string, unknown[]> | undefined;
+
+      const players: BoxScorePlayer[] = [];
+      const goalies: BoxScoreGoalie[] = [];
+
+      if (teamPlayerStats) {
+        for (const position of ["forwards", "defense"]) {
+          const posPlayers = (teamPlayerStats[position] ?? []) as Record<string, unknown>[];
+          for (const p of posPlayers) {
+            const name = (p.name as { default?: string })?.default ?? "";
+            players.push({
+              name,
+              sweaterNumber: (p.sweaterNumber as number) ?? 0,
+              position: (p.positionCode as string) ?? "",
+              goals: (p.goals as number) ?? 0,
+              assists: (p.assists as number) ?? 0,
+              points: ((p.goals as number) ?? 0) + ((p.assists as number) ?? 0),
+              shots: (p.shots as number) ?? 0,
+              hits: (p.hits as number) ?? 0,
+              blockedShots: (p.blockedShots as number) ?? 0,
+              toi: (p.toi as string) ?? "0:00",
+            });
+          }
+        }
+
+        const goalieList = (teamPlayerStats.goalies ?? []) as Record<string, unknown>[];
+        for (const g of goalieList) {
+          const name = (g.name as { default?: string })?.default ?? "";
+          const savePctg = (g.savePctg as number) ?? 0;
+          goalies.push({
+            name,
+            sweaterNumber: (g.sweaterNumber as number) ?? 0,
+            savePct: savePctg > 0 ? (savePctg * 100).toFixed(1) + "%" : "-",
+            saves: (g.saves as number) ?? 0,
+            shotsAgainst: (g.shotsAgainst as number) ?? 0,
+            goalsAgainst: (g.goalsAgainst as number) ?? 0,
+            toi: (g.toi as string) ?? "0:00",
+          });
+        }
+      }
+
+      return {
+        abbrev,
+        score,
+        sog,
+        faceoffPct: "",
+        powerPlay: "",
+        pim: 0,
+        hits: players.reduce((sum, p) => sum + p.hits, 0),
+        blockedShots: players.reduce((sum, p) => sum + p.blockedShots, 0),
+        players: players.sort((a, b) => b.points - a.points || b.goals - a.goals),
+        goalies,
+      };
+    }
+
+    return {
+      gameId,
+      gameState,
+      period,
+      periodLabel,
+      timeRemaining: (data.clock as Record<string, unknown>)?.timeRemaining as string ?? "",
+      away: parseTeamBoxScore(data, "away"),
+      home: parseTeamBoxScore(data, "home"),
+    };
+  } catch (error) {
+    console.error("Failed to fetch box score:", error);
+    return null;
+  }
+}
+
+/** Fetch player profile with career stats and awards */
+export async function fetchPlayerProfile(playerId: number): Promise<PlayerProfile | null> {
+  try {
+    const res = await fetch(`${NHL_API_BASE}/player/${playerId}/landing`, {
+      next: { revalidate: 86400 }, // cache for 24 hours — career data changes rarely
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+
+    const fullName = `${(data.firstName as { default: string })?.default ?? ""} ${(data.lastName as { default: string })?.default ?? ""}`.trim();
+    const position = (data.position as string) ?? "";
+    const currentTeam = (data.currentTeamAbbrev as string) ?? "";
+
+    // Extract last 3 NHL seasons from seasonTotals
+    const seasonTotals = (data.seasonTotals ?? []) as Record<string, unknown>[];
+    const nhlSeasons = seasonTotals
+      .filter((s) => s.leagueAbbrev === "NHL" && s.gameTypeId === 2) // regular season only
+      .sort((a, b) => ((b.season as number) ?? 0) - ((a.season as number) ?? 0))
+      .slice(0, 3);
+
+    const recentSeasons: PlayerSeasonStats[] = nhlSeasons.map((s) => {
+      const seasonNum = (s.season as number) ?? 0;
+      const startYear = Math.floor(seasonNum / 10000);
+      const endYear = seasonNum % 10000;
+      return {
+        season: `${startYear}-${String(endYear).slice(2)}`,
+        teamAbbrev: (s.teamName as { default: string })?.default ?? "",
+        gamesPlayed: (s.gamesPlayed as number) ?? 0,
+        goals: (s.goals as number) ?? 0,
+        assists: (s.assists as number) ?? 0,
+        points: (s.points as number) ?? 0,
+        plusMinus: (s.plusMinus as number) ?? 0,
+        pim: (s.pim as number) ?? 0,
+        powerPlayGoals: (s.powerPlayGoals as number) ?? 0,
+        shots: (s.shots as number) ?? 0,
+        shootingPct: Math.round(((s.shootingPctg as number) ?? 0) * 1000) / 10,
+        avgToi: (s.avgToi as string) ?? "",
+      };
+    });
+
+    // Extract awards
+    const awardsData = (data.awards ?? []) as Record<string, unknown>[];
+    const awards: PlayerAward[] = awardsData.map((a) => {
+      const trophy = (a.trophy as { default: string })?.default ?? "";
+      const awardSeasons = ((a.seasons as Record<string, unknown>[]) ?? []).map((s) => {
+        const sId = (s.seasonId as number) ?? 0;
+        const sy = Math.floor(sId / 10000);
+        return `${sy}-${String((sId % 10000)).slice(2)}`;
+      });
+      return { trophy, seasons: awardSeasons };
+    });
+
+    return {
+      playerId,
+      fullName,
+      position,
+      currentTeam,
+      recentSeasons,
+      awards,
+    };
+  } catch (error) {
+    console.error(`Failed to fetch player profile ${playerId}:`, error);
+    return null;
+  }
 }

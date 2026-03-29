@@ -28,6 +28,8 @@ export interface SyncOptions {
   batchSize?: number;
   oldestFirst?: boolean;
   skipOdds?: boolean;
+  modelVersion?: string;
+  modelConfig?: import("./types").ModelConfig;
 }
 
 export interface SyncResult {
@@ -45,11 +47,13 @@ export async function syncHistoryBatch(
 ): Promise<SyncResult> {
   const batchSize = options?.batchSize ?? BATCH_SIZE;
   const oldestFirst = options?.oldestFirst ?? false;
+  const modelVersion = options?.modelVersion ?? "v2";
 
   const allDates = getDateRange(SEASON_START, getYesterday());
 
   const existingDates = await prisma.predictionRecord.groupBy({
     by: ["gameDate"],
+    where: { modelVersion },
   });
   const syncedDates = new Set(existingDates.map((d) => d.gameDate));
 
@@ -114,7 +118,7 @@ export async function syncHistoryBatch(
     if (completedGames.length === 0) {
       // Insert a sentinel so this date is not retried
       await prisma.predictionRecord.upsert({
-        where: { gameId_gameDate: { gameId: 0, gameDate: date } },
+        where: { gameId_gameDate_modelVersion: { gameId: 0, gameDate: date, modelVersion } },
         update: {},
         create: {
           gameId: 0,
@@ -135,6 +139,7 @@ export async function syncHistoryBatch(
           ouPrediction: "UNDER",
           actualTotal: 0,
           ouCorrect: false,
+          modelVersion,
         },
       });
       processedDates.push(date);
@@ -150,7 +155,12 @@ export async function syncHistoryBatch(
         injuries,
         odds,
         playerProps,
-        teamStatsMap
+        teamStatsMap,
+        undefined, // gameDayIndex
+        undefined, // futuresMap
+        undefined, // playerProfileMap
+        undefined, // lineCombosMap
+        options?.modelConfig
       );
 
       for (const pred of predictions) {
@@ -165,7 +175,7 @@ export async function syncHistoryBatch(
 
         await prisma.predictionRecord.upsert({
           where: {
-            gameId_gameDate: { gameId: pred.gameId, gameDate: date },
+            gameId_gameDate_modelVersion: { gameId: pred.gameId, gameDate: date, modelVersion },
           },
           update: {},
           create: {
@@ -199,6 +209,7 @@ export async function syncHistoryBatch(
             propPick: pred.playerProp?.recommendation ?? null,
             homeGoalsPerGame: pred.homeTeam.goalsForPerGame,
             awayGoalsPerGame: pred.awayTeam.goalsForPerGame,
+            modelVersion,
           },
         });
       }
@@ -285,10 +296,11 @@ export interface HistoryDay {
 }
 
 export async function getHistoryForDate(
-  date: string
+  date: string,
+  modelVersion = "v2"
 ): Promise<HistoryDay | null> {
   const records = await prisma.predictionRecord.findMany({
-    where: { gameDate: date, gameId: { not: 0 } },
+    where: { gameDate: date, gameId: { not: 0 }, modelVersion },
   });
   if (records.length === 0) return null;
 
@@ -310,9 +322,9 @@ export interface AccuracyPoint {
   games: number;
 }
 
-export async function getAccuracyTimeline(): Promise<AccuracyPoint[]> {
+export async function getAccuracyTimeline(modelVersion = "v2"): Promise<AccuracyPoint[]> {
   const records = await prisma.predictionRecord.findMany({
-    where: { gameId: { not: 0 } },
+    where: { gameId: { not: 0 }, modelVersion },
     orderBy: { gameDate: "asc" },
   });
 
@@ -343,14 +355,14 @@ export async function getAccuracyTimeline(): Promise<AccuracyPoint[]> {
   return dailyPoints;
 }
 
-export async function getOverallStats(): Promise<{
+export async function getOverallStats(modelVersion = "v2"): Promise<{
   totalGames: number;
   winnerPct: number;
   ouPct: number;
   syncedDates: string[];
 }> {
   const records = await prisma.predictionRecord.findMany({
-    where: { gameId: { not: 0 } },
+    where: { gameId: { not: 0 }, modelVersion },
   });
   const totalGames = records.length;
   const winnerCorrect = records.filter((r) => r.winnerCorrect).length;
@@ -364,4 +376,45 @@ export async function getOverallStats(): Promise<{
     ouPct: totalGames > 0 ? Math.round((ouCorrect / totalGames) * 100) : 0,
     syncedDates: dates,
   };
+}
+
+export interface ModelAccuracy {
+  modelVersion: string;
+  totalGames: number;
+  winnerPct: number;
+  ouPct: number;
+  syncedDates: number;
+}
+
+export async function getAccuracyByModel(): Promise<ModelAccuracy[]> {
+  const records = await prisma.predictionRecord.findMany({
+    where: { gameId: { not: 0 } },
+  });
+
+  const grouped = new Map<
+    string,
+    { total: number; winnerCorrect: number; ouCorrect: number; dates: Set<string> }
+  >();
+
+  for (const r of records) {
+    const entry = grouped.get(r.modelVersion) ?? {
+      total: 0,
+      winnerCorrect: 0,
+      ouCorrect: 0,
+      dates: new Set<string>(),
+    };
+    entry.total++;
+    if (r.winnerCorrect) entry.winnerCorrect++;
+    if (r.ouCorrect) entry.ouCorrect++;
+    entry.dates.add(r.gameDate);
+    grouped.set(r.modelVersion, entry);
+  }
+
+  return Array.from(grouped.entries()).map(([version, stats]) => ({
+    modelVersion: version,
+    totalGames: stats.total,
+    winnerPct: stats.total > 0 ? Math.round((stats.winnerCorrect / stats.total) * 100) : 0,
+    ouPct: stats.total > 0 ? Math.round((stats.ouCorrect / stats.total) * 100) : 0,
+    syncedDates: stats.dates.size,
+  }));
 }

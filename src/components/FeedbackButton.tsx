@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export default function FeedbackButton({ dark }: { dark?: boolean }) {
+export default function FeedbackButton({ dark, label = "Shoot us a message" }: { dark?: boolean; label?: string }) {
   const [showModal, setShowModal] = useState(false);
   const [showSecondModal, setShowSecondModal] = useState(false);
 
@@ -16,7 +16,7 @@ export default function FeedbackButton({ dark }: { dark?: boolean }) {
             : "text-accent-blue hover:text-charcoal"
         }`}
       >
-        Share Your Ideas
+        {label}
       </button>
 
       {showModal && (

@@ -1,4 +1,4 @@
-import { OddsResponse, PlayerPropPick, NHLClubStats } from "./types";
+import { OddsResponse, PlayerPropPick, NHLClubStats, FuturesOdds } from "./types";
 import { americanToImpliedProbability, formatOdds } from "./utils";
 
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4/sports";
@@ -158,13 +158,16 @@ export function getMoneylineOdds(
 
 // Maximum line thresholds per market — props above these are absurd
 const MAX_LINE_BY_MARKET: Record<string, number> = {
-  player_goals: 1.5,        // Over 2.5 goals is nearly impossible for any single player
-  player_assists: 2.5,      // Over 2.5 assists is very rare
-  player_shots_on_goal: 6.5, // Over 6.5 SOG is reasonable for heavy shooters
+  player_goals: 0.5,         // Only 0.5 goal lines (realistic, not hat tricks)
+  player_assists: 1.5,       // Max Over 1.5 assists
+  player_shots_on_goal: 5.5, // Over 5.5 SOG is the upper bound for shooters
 };
 
-// Maximum odds to consider — skip extreme longshots
-const MAX_ODDS = 800;
+// Maximum odds to consider — skip longshots that are unreasonable
+const MAX_ODDS = 350;
+
+// Minimum games played to consider a player (avoid call-ups with tiny samples)
+const MIN_GAMES_PLAYED = 20;
 
 export function findBestPlayerProp(
   propData: OddsResponse[],
@@ -199,27 +202,43 @@ export function findBestPlayerProp(
         // Filter 3: Only consider "Over" props (more intuitive for users)
         if (outcome.name !== "Over") continue;
 
-        const impliedProb = americanToImpliedProbability(outcome.price);
-
         // Look up actual player stats for context
         const playerStats = lookupPlayerStats(outcome.description, clubStatsMap);
+
+        // Filter 4: Require minimum games played — skip call-ups/unknowns
+        if (playerStats && playerStats.gamesPlayed < MIN_GAMES_PLAYED) continue;
+
+        // Filter 5: Player quality gate — prefer top-line players
+        // Skip players with very low production (bottom-6 forwards doing hat trick props)
+        if (playerStats) {
+          const ppg = (playerStats.goalsPerGame + playerStats.assistsPerGame);
+          // For goal props, require at least a moderate scorer (0.3+ PPG)
+          if (market.key === "player_goals" && ppg < 0.3) continue;
+          // For assist props, require playmaker ability (0.3+ PPG)
+          if (market.key === "player_assists" && ppg < 0.3) continue;
+          // Shots props are fine for any regular player
+        }
+
+        const impliedProb = americanToImpliedProbability(outcome.price);
 
         // Calculate a scoring metric that balances value with plausibility
         let score = 0;
         if (outcome.price > 0) {
-          // Positive odds: potential value
+          // Positive odds: potential value, but penalize long shots more
           const ev = (1 / impliedProb - 1) * 0.5 - 0.5;
           score = ev;
+          // Penalize high odds progressively — prefer realistic picks
+          if (outcome.price > 200) score -= (outcome.price - 200) * 0.001;
         } else {
           // Negative odds (favorite): slight bonus for high-probability plays
-          score = impliedProb - 0.55; // only score if >55% implied
+          score = impliedProb - 0.50; // score if >50% implied (lowered from 55%)
         }
 
         // Prefer shots on goal (more predictable) over goals (high variance)
-        if (market.key === "player_shots_on_goal") score += 0.05;
-        if (market.key === "player_assists") score += 0.02;
+        if (market.key === "player_shots_on_goal") score += 0.08;
+        if (market.key === "player_assists") score += 0.03;
 
-        // Boost score if player's real average supports the line
+        // Boost score for known, productive players
         if (playerStats) {
           const marketType = market.key.replace("player_", "");
           let perGameAvg = 0;
@@ -228,10 +247,20 @@ export function findBestPlayerProp(
           else if (marketType === "shots_on_goal") perGameAvg = playerStats.shotsPerGame;
 
           if (perGameAvg > outcome.point) {
-            score += 0.1; // player averages above the line — good sign
+            score += 0.15; // player averages above the line — strong signal
+          } else if (perGameAvg > outcome.point * 0.8) {
+            score += 0.05; // player is close to the line — decent
           } else if (perGameAvg < outcome.point * 0.5) {
-            score -= 0.3; // player averages well below the line — skip
+            score -= 0.5; // player averages well below the line — hard skip
           }
+
+          // Bonus for high-volume players (more reliable props)
+          const ppg = playerStats.goalsPerGame + playerStats.assistsPerGame;
+          if (ppg >= 0.8) score += 0.1;  // star player
+          else if (ppg >= 0.5) score += 0.05; // solid top-6
+        } else {
+          // No stats found — penalize unknown players
+          score -= 0.2;
         }
 
         if (score > bestScore) {
@@ -322,4 +351,49 @@ function findGameOdds(
       g.home_team.toLowerCase().includes(homeTeam.toLowerCase()) ||
       g.away_team.toLowerCase().includes(awayTeam.toLowerCase())
   );
+}
+
+const FUTURES_SPORT = "icehockey_nhl_championship_winner";
+
+export async function fetchStanleyCupFutures(): Promise<FuturesOdds[]> {
+  const apiKey = getActiveKey();
+  if (!apiKey) return [];
+
+  try {
+    const res = await oddsApiFetch(
+      `${ODDS_API_BASE}/${FUTURES_SPORT}/odds?apiKey=__API_KEY__&regions=us&markets=outrights&oddsFormat=american`
+    );
+    if (!res) return [];
+
+    const data = await res.json();
+    const results: FuturesOdds[] = [];
+
+    // Prefer DraftKings, fall back to any bookmaker
+    const bookmakers = data.bookmakers ?? [];
+    const dk = bookmakers.find((b: { key: string }) => b.key === "draftkings");
+    const bookmaker = dk ?? bookmakers[0];
+    if (!bookmaker) return [];
+
+    const outrightsMarket = bookmaker.markets?.find((m: { key: string }) => m.key === "outrights");
+    if (!outrightsMarket) return [];
+
+    for (const outcome of outrightsMarket.outcomes ?? []) {
+      const odds = outcome.price;
+      const impliedProb = americanToImpliedProbability(odds);
+      results.push({
+        team: outcome.name,
+        odds,
+        impliedProbability: Math.round(impliedProb * 1000) / 10,
+        bookmaker: bookmaker.title ?? bookmaker.key,
+      });
+    }
+
+    // Sort by implied probability (favorites first)
+    results.sort((a, b) => b.impliedProbability - a.impliedProbability);
+
+    return results;
+  } catch (error) {
+    console.error("Failed to fetch Stanley Cup futures:", error);
+    return [];
+  }
 }

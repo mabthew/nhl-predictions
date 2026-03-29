@@ -6,26 +6,27 @@ import FeedbackButton from "@/components/FeedbackButton";
 // --- Data ---
 
 const PRIMARY_FACTORS = [
-  { pct: 22, label: "Goal Differential", desc: "Net goals scored minus goals allowed, per game. The most predictive single stat in hockey for measuring overall team quality.", bold: "most predictive single stat", icon: "goal-diff" },
-  { pct: 15, label: "Shots For Per Game", desc: "Average shots on goal generated per game. More shots means more scoring opportunities and offensive zone pressure.", bold: "more scoring opportunities", icon: "shots-for" },
-  { pct: 13, label: "Current Streak", desc: "Point percentage over the last 10 games. Captures current momentum, hot and cold streaks, and recent lineup changes.", bold: "current momentum", icon: "streak" },
+  { pct: 20, label: "Goal Differential", desc: "Net goals scored minus goals allowed, per game. This is the single best predictor of team quality in hockey. Teams that consistently outscore opponents tend to keep doing it.", bold: "single best predictor", icon: "goal-diff" },
+  { pct: 14, label: "Shots Per Game", desc: "Average shots on goal generated per game. More shots on net means more scoring chances and sustained offensive zone pressure.", bold: "more scoring chances", icon: "shots-for" },
+  { pct: 12, label: "Current Streak", desc: "Point percentage over the last 10 games. This captures hot streaks, cold stretches, and recent lineup changes that season-long numbers can miss.", bold: "hot streaks, cold stretches", icon: "streak" },
 ];
 
 const SUPPORTING_FACTORS = [
-  { pct: 12, label: "Penalty Kill", desc: "How often a team successfully defends when playing short-handed. A strong penalty kill prevents easy goals and is one of the most repeatable team skills in hockey.", bold: "most repeatable team skills", icon: "penalty-kill" },
-  { pct: 10, label: "Power Play", desc: "Conversion rate on power play opportunities. A real but high-variance factor. Elite teams convert 25 to 30 percent, while the league average sits around 21 percent.", bold: "high-variance factor", icon: "lightning" },
-  { pct: 10, label: "Goalie Quality", desc: "Starting goalie save percentage. Goaltending has the highest single-game impact of any position in hockey.", bold: "highest single-game impact", icon: "goalie" },
-  { pct: 10, label: "Roster Health", desc: "Impact of injuries weighted by player importance. A missing star player hurts far more than losing a depth player.", bold: "missing star player", icon: "health" },
+  { pct: 12, label: "Penalty Kill", desc: "How well a team defends when short-handed. A strong penalty kill prevents easy goals and is one of the most consistent team skills from game to game.", bold: "most consistent team skills", icon: "penalty-kill" },
+  { pct: 10, label: "Power Play", desc: "Conversion rate on power play opportunities. It matters, but carries high variance from night to night. The best teams convert 25 to 30 percent, league average sits around 21.", bold: "high variance", icon: "lightning" },
+  { pct: 10, label: "Goalie Quality", desc: "Starting goalie save percentage. Goaltending has the largest single-game impact of any position in hockey. One strong performance can steal a game.", bold: "largest single-game impact", icon: "goalie" },
+  { pct: 10, label: "Roster Health", desc: "Injury impact weighted by player importance using line combinations from Daily Faceoff. Losing a first-line center is far more damaging than a fourth-line winger. Falls back to points-per-game estimates when line data is unavailable.", bold: "Daily Faceoff", icon: "health" },
 ];
 
 const MINOR_FACTORS = [
-  { pct: 5, label: "Shots Against Per Game", desc: "Average shots allowed per game. Fewer shots against indicates better defensive structure and puck possession.", bold: "defensive structure", icon: "shots-against" },
-  { pct: 3, label: "Faceoff Win Rate", desc: "Team faceoff win rate. Despite popular belief, research shows faceoffs have a very weak correlation with winning.", bold: "very weak correlation", icon: "faceoff" },
+  { pct: 5, label: "Futures Market", desc: "Stanley Cup championship odds represent the betting market's aggregate view of team quality. Contenders get a boost, rebuilding teams get a penalty. Sourced from DraftKings via The Odds API.", bold: "aggregate view of team quality", icon: "futures" },
+  { pct: 5, label: "Shots Against Per Game", desc: "Average shots allowed per game. Fewer shots against generally indicates better defensive structure and more puck possession.", bold: "better defensive structure", icon: "shots-against" },
+  { pct: 2, label: "Faceoff Win Rate", desc: "Team faceoff win percentage. Despite its reputation, the research shows faceoff rate has a very weak correlation with winning games. We weight it accordingly.", bold: "very weak correlation", icon: "faceoff" },
 ];
 
 const PIPELINE = [
-  { label: "Data Collection", sub: "NHL API, injuries, odds", icon: "data" },
-  { label: "Factor Scoring", sub: "9 weighted metrics", icon: "scoring" },
+  { label: "Data Collection", sub: "NHL API, odds, injuries, lines", icon: "data" },
+  { label: "Factor Scoring", sub: "10 weighted metrics", icon: "scoring" },
   { label: "Composite Score", sub: "Weighted sum + bonus", icon: "composite" },
   { label: "Confidence", sub: "50 to 95% rating", icon: "gauge" },
   { label: "Final Pick", sub: "Higher composite wins", icon: "pick" },
@@ -66,6 +67,8 @@ function FactorIcon({ icon, className = "w-5 h-5 text-espn-red" }: { icon: strin
       return <svg {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /><path strokeLinecap="round" strokeLinejoin="round" d="M3.5 12h3l1.5-3 2 6 1.5-3h3" /></svg>;
     case "shots-against":
       return <svg {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 2l8 4v6c0 5.25-3.5 9.74-8 11-4.5-1.26-8-5.75-8-11V6l8-4z" /><path strokeLinecap="round" d="M15 9l-6 6M9 9l6 6" /></svg>;
+    case "futures":
+      return <svg {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2 7l4.41-1.41L12 2l5.59 3.59L22 7l-1.41 4.41L24 17l-5.59 1.41L12 22l-5.59-3.59L2 17l1.41-4.41L0 7z" /><circle cx="12" cy="12" r="3" /></svg>;
     case "faceoff":
       return <svg {...props}><circle cx="12" cy="12" r="3" /><path strokeLinecap="round" d="M5 5l4 4M19 5l-4 4M5 19l4-4M19 19l-4-4" /></svg>;
     case "arena":
@@ -87,8 +90,8 @@ function FactorIcon({ icon, className = "w-5 h-5 text-espn-red" }: { icon: strin
 
 function PipelineIcon({ icon }: { icon: string }) {
   return (
-    <div className="w-10 h-10 rounded-full bg-espn-red/10 flex items-center justify-center mx-auto mb-2">
-      <FactorIcon icon={icon} className="w-5 h-5 text-espn-red" />
+    <div className="w-10 h-10 rounded-full bg-charcoal/10 flex items-center justify-center mx-auto mb-2">
+      <FactorIcon icon={icon} className="w-5 h-5 text-charcoal" />
     </div>
   );
 }
@@ -97,7 +100,7 @@ function PipelineArrow({ direction }: { direction: "right" | "down" }) {
   if (direction === "right") {
     return (
       <div className="flex-none hidden sm:flex items-center justify-center w-8">
-        <svg className="w-5 h-5 text-espn-red/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className="w-5 h-5 text-charcoal/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
         </svg>
       </div>
@@ -105,7 +108,7 @@ function PipelineArrow({ direction }: { direction: "right" | "down" }) {
   }
   return (
     <div className="flex-none sm:hidden flex items-center justify-center py-1">
-      <svg className="w-5 h-5 text-espn-red/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <svg className="w-5 h-5 text-charcoal/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
       </svg>
     </div>
@@ -133,12 +136,12 @@ export default function MethodologyPage() {
           How Predictions Work
         </h1>
         <p className="text-sm text-medium-gray mb-4">
-          Every game prediction is built from <strong className="font-semibold text-charcoal">nine weighted factors</strong> derived from
-          real NHL data, sourced directly from the NHL Stats API.
+          Every prediction is built from <strong className="font-semibold text-charcoal">ten weighted factors</strong> pulled from
+          the NHL Stats API, betting markets, and line combination data.
         </p>
         <p className="text-sm text-medium-gray mb-8">
           Each factor is scored and combined into a <strong className="font-semibold text-charcoal">composite score</strong> from 0 to 100 for each team.
-          The team with the higher composite score is our pick, and the gap between the two scores determines confidence.
+          The team with the higher composite is our pick, and the gap between the two scores determines confidence.
         </p>
 
         {/* Pipeline */}
@@ -250,9 +253,41 @@ export default function MethodologyPage() {
             <span className="font-teko text-2xl font-bold text-green-600 leading-none">+2 pts</span>
           </div>
           <p className="text-xs text-medium-gray leading-relaxed">
-            Home teams historically win <strong className="font-semibold text-charcoal">about 54% of NHL games</strong>. The advantage comes from
-            last change, crowd energy, and familiar ice. This adds 2 points to the home team&apos;s composite score.
+            Home teams win <strong className="font-semibold text-charcoal">about 54% of NHL games</strong> historically. Last change, crowd energy, and familiar ice
+            all contribute. We add a flat 2-point bonus to the home team&apos;s composite score.
           </p>
+        </div>
+
+        {/* Additional Modifiers */}
+        <p className="text-[11px] font-bold uppercase tracking-widest text-charcoal/50 mb-3">
+          Additional Modifiers
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+          <div className="bg-white rounded-xl border border-border-gray p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                <FactorIcon icon="futures" className="w-4 h-4 text-yellow-600" />
+              </div>
+              <h3 className="text-sm font-bold text-charcoal flex-1">Star Power</h3>
+              <span className="font-teko text-lg font-bold text-yellow-600 leading-none">&plusmn;2%</span>
+            </div>
+            <p className="text-xs text-medium-gray leading-relaxed">
+              Players who have won <strong className="font-semibold text-charcoal">major trophies</strong> (Hart, Art Ross, Rocket Richard, Norris, Vezina) or are trending up
+              in points per game will nudge the confidence score. We look at the last three seasons of career data plus all awards from the NHL player profile API.
+            </p>
+          </div>
+          <div className="bg-white rounded-xl border border-border-gray p-5">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                <FactorIcon icon="data" className="w-4 h-4 text-purple-600" />
+              </div>
+              <h3 className="text-sm font-bold text-charcoal flex-1">Line Combinations</h3>
+            </div>
+            <p className="text-xs text-medium-gray leading-relaxed">
+              Projected line combinations from <strong className="font-semibold text-charcoal">Daily Faceoff</strong> help us weight injury impact more accurately.
+              Losing a first-line center carries a 20-point penalty, while a fourth-line winger costs only 3. When line data is unavailable, we fall back to points-per-game estimates.
+            </p>
+          </div>
         </div>
 
         {/* Confidence Scores */}
@@ -261,7 +296,7 @@ export default function MethodologyPage() {
             Confidence Scores
           </h2>
           <p className="text-xs text-medium-gray mb-5">
-            Each prediction includes a confidence percentage from <strong className="font-semibold text-charcoal">50% to 95%</strong>, based on the gap between composite scores.
+            Every prediction includes a confidence percentage from <strong className="font-semibold text-charcoal">50% to 95%</strong>, based on the gap between the two teams&apos; composite scores.
           </p>
 
           {/* Gradient bar */}
@@ -291,10 +326,83 @@ export default function MethodologyPage() {
           </div>
         </div>
 
+        {/* Over/Under Predictions */}
+        <div className="bg-white rounded-xl border border-border-gray shadow-sm p-6 mb-8">
+          <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-1">
+            Over/Under Predictions
+          </h2>
+          <p className="text-xs text-medium-gray mb-4">
+            Every game includes an over/under prediction on total goals scored.
+          </p>
+          <div className="space-y-3 text-xs text-medium-gray leading-relaxed">
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-accent-blue font-bold text-[10px]">1</span>
+              </div>
+              <div>
+                <p className="font-semibold text-charcoal mb-0.5">The Line</p>
+                <p>The over/under line (e.g. 5.5, 6.0) comes from <strong className="font-semibold text-charcoal">consensus Vegas odds</strong>, averaged across
+                multiple bookmakers via The Odds API. If odds are unavailable, we default to 5.5.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-accent-blue font-bold text-[10px]">2</span>
+              </div>
+              <div>
+                <p className="font-semibold text-charcoal mb-0.5">Our Projected Total</p>
+                <p>We calculate an expected total from team stats: <strong className="font-semibold text-charcoal">(home goals for + away goals for + home goals against + away goals against) / 2</strong>.
+                This averages each team&apos;s offensive output with what they typically allow.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-accent-blue font-bold text-[10px]">3</span>
+              </div>
+              <div>
+                <p className="font-semibold text-charcoal mb-0.5">The Prediction</p>
+                <p>If our projected total exceeds the Vegas line, we predict <strong className="font-semibold text-charcoal">OVER</strong>. If it falls below, <strong className="font-semibold text-charcoal">UNDER</strong>.
+                Confidence scales with how far our projection diverges from the line.</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 p-3 bg-light-gray rounded-lg">
+            <p className="text-[11px] text-medium-gray">
+              <strong className="text-charcoal">Important distinction:</strong> The line comes from Vegas. The over/under call is ours.
+              We use the betting market as a benchmark, then compare it against our own scoring projections from team statistics.
+            </p>
+          </div>
+        </div>
+
+        {/* Player Props */}
+        <div className="bg-white rounded-xl border border-border-gray shadow-sm p-6 mb-8">
+          <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-1">
+            Player Prop Picks
+          </h2>
+          <p className="text-xs text-medium-gray mb-4">
+            For each game, we surface the single best-value player prop.
+          </p>
+          <div className="space-y-3 text-xs text-medium-gray leading-relaxed">
+            <p>
+              Player props are sourced from <strong className="font-semibold text-charcoal">The Odds API</strong> and filtered for quality:
+              minimum 20 games played, 0.3 or more points per game, goal lines capped at 0.5, and maximum odds of +350.
+            </p>
+            <p>
+              Each prop is scored by <strong className="font-semibold text-charcoal">expected value</strong>, comparing the player&apos;s
+              recent statistical average against the bookmaker&apos;s line and odds. Established players with strong track records receive a bonus,
+              while lesser-known players are penalized slightly.
+            </p>
+            <p>
+              Every pick includes a risk level (low, medium, high) and a justification explaining why the prop has value
+              based on recent performance.
+            </p>
+          </div>
+        </div>
+
         {/* CTA */}
         <div className="text-center">
           <p className="text-sm text-medium-gray">
-            Let us know your thoughts on how to improve our methodology.
+            Thoughts on how to improve our methodology?
           </p>
           <div className="mt-2">
             <FeedbackButton />

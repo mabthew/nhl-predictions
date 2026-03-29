@@ -18,6 +18,8 @@ function formatTickerDate(dateStr: string): string {
 }
 
 function TickerItem({ game, showDate }: { game: GamePrediction; showDate: boolean }) {
+  const isLive = game.gameStatus === "live";
+
   return (
     <div className="flex-none flex items-center">
       {showDate && (
@@ -31,21 +33,34 @@ function TickerItem({ game, showDate }: { game: GamePrediction; showDate: boolea
         href={`/game/${game.gameId}`}
         className="flex items-center gap-3 px-5 py-1.5 border-r border-medium-gray/60 hover:bg-white/5 transition-colors"
       >
+        {isLive && (
+          <span className="h-2 w-2 rounded-full bg-espn-red header-pulse flex-shrink-0" />
+        )}
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-5 flex-shrink-0">
-            {game.awayTeam.teamLogo && (
-              <img src={game.awayTeam.teamLogo} alt={game.awayTeam.teamAbbrev} className="w-5 h-5" />
+            {(game.awayTeam.teamDarkLogo || game.awayTeam.teamLogo) && (
+              <img src={game.awayTeam.teamDarkLogo || game.awayTeam.teamLogo} alt={game.awayTeam.teamAbbrev} className="w-5 h-5" />
             )}
           </div>
           <span className={`text-sm font-semibold text-white ${game.predictedWinner === "away" ? "underline underline-offset-2 decoration-espn-red" : ""}`}>
             {game.awayTeam.teamAbbrev}
           </span>
+          {isLive && game.liveScore && (
+            <span className="text-sm font-bold text-white">{game.liveScore.awayScore}</span>
+          )}
         </div>
-        <span className="text-white/35 text-xs">@</span>
+        {isLive ? (
+          <span className="text-white/35 text-xs">-</span>
+        ) : (
+          <span className="text-white/35 text-xs">@</span>
+        )}
         <div className="flex items-center gap-1.5">
+          {isLive && game.liveScore && (
+            <span className="text-sm font-bold text-white">{game.liveScore.homeScore}</span>
+          )}
           <div className="w-5 h-5 flex-shrink-0">
-            {game.homeTeam.teamLogo && (
-              <img src={game.homeTeam.teamLogo} alt={game.homeTeam.teamAbbrev} className="w-5 h-5" />
+            {(game.homeTeam.teamDarkLogo || game.homeTeam.teamLogo) && (
+              <img src={game.homeTeam.teamDarkLogo || game.homeTeam.teamLogo} alt={game.homeTeam.teamAbbrev} className="w-5 h-5" />
             )}
           </div>
           <span className={`text-sm font-semibold text-white ${game.predictedWinner === "home" ? "underline underline-offset-2 decoration-espn-red" : ""}`}>
@@ -53,8 +68,12 @@ function TickerItem({ game, showDate }: { game: GamePrediction; showDate: boolea
           </span>
         </div>
         <div className="flex items-center gap-2 ml-1">
-          <span className="text-[11px] text-white/60">{formatGameTime(game.startTime)}</span>
-          <span className="text-[11px] text-white/35">Over/Under {game.overUnder.line}</span>
+          {isLive ? (
+            <span className="text-[11px] text-espn-red font-semibold">{game.liveScore?.periodLabel} {game.liveScore?.timeRemaining}</span>
+          ) : (
+            <span className="text-[11px] text-white/60">{formatGameTime(game.startTime)}</span>
+          )}
+          <span className="text-[11px] text-white/35">O/U {game.overUnder.line}</span>
         </div>
       </Link>
     </div>

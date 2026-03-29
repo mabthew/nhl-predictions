@@ -3,12 +3,17 @@ import Footer from "@/components/Footer";
 import TimeAgo from "@/components/TimeAgo";
 import Ticker from "@/components/Ticker";
 import WeekView from "@/components/WeekView";
+import FuturesTable from "@/components/FuturesTable";
 import { getPredictions } from "@/lib/get-predictions";
+import { fetchStanleyCupFutures } from "@/lib/odds-api";
 
 export const revalidate = 180;
 
 export default async function Home() {
-  const data = await getPredictions();
+  const [data, futures] = await Promise.all([
+    getPredictions(),
+    fetchStanleyCupFutures(),
+  ]);
 
   return (
     <>
@@ -44,6 +49,12 @@ export default async function Home() {
           <WeekView predictions={data.predictions} />
         ) : (
           <EmptyState />
+        )}
+
+        {futures.length > 0 && (
+          <div className="mt-12">
+            <FuturesTable futures={futures} />
+          </div>
         )}
 
       </main>

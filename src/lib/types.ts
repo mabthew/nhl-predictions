@@ -188,6 +188,8 @@ export interface TeamMetrics {
   startingGoalieSavePct?: number;
   startingGoalieGAA?: number;
   startingGoalieName?: string;
+  futuresImpliedProb?: number;  // Championship implied probability (0-100)
+  starPower?: number;           // Star power score for confidence modifier
 }
 
 export interface PlayerPropPick {
@@ -212,10 +214,21 @@ export interface OverUnderPrediction {
 }
 
 export type ForecastTier = "full" | "early" | "preliminary";
+export type GameStatus = "upcoming" | "live" | "final";
 
 export interface DataAvailability {
   hasOdds: boolean;
   hasPlayerProps: boolean;
+}
+
+export interface LiveGameScore {
+  homeScore: number;
+  awayScore: number;
+  period: number;
+  periodLabel: string;
+  timeRemaining: string;
+  homeSog: number;
+  awaySog: number;
 }
 
 export interface GamePrediction {
@@ -233,10 +246,133 @@ export interface GamePrediction {
   dayIndex: number;
   forecastTier: ForecastTier;
   dataAvailability: DataAvailability;
+  gameStatus: GameStatus;
+  liveScore?: LiveGameScore;
 }
 
 export interface PredictionsResponse {
   date: string;
   generatedAt: string;
   predictions: GamePrediction[];
+}
+
+// ── Model Configuration Types ──
+
+export interface ModelWeights {
+  goalDiffPerGame: number;
+  shotsForPerGame: number;
+  penaltyKillPct: number;
+  powerPlayPct: number;
+  recentForm: number;
+  irImpact: number;
+  goalie: number;
+  futuresMarket: number;
+  shotsAgainstPerGame: number;
+  faceoffWinPct: number;
+}
+
+export interface ModelConfig {
+  id: string;
+  name: string;
+  description: string;
+  weights: ModelWeights;
+  homeIceBonus: number;
+  enableStarPower: boolean;
+  enableFutures: boolean;
+  confidenceMultiplier: number;
+}
+
+// ── Stanley Cup Futures Types ──
+
+export interface FuturesOdds {
+  team: string;
+  odds: number;
+  impliedProbability: number;
+  bookmaker: string;
+}
+
+export interface FuturesResponse {
+  generatedAt: string;
+  teams: FuturesOdds[];
+}
+
+// ── Box Score Types ──
+
+// ── Player Profile Types (multi-season + awards) ──
+
+export interface PlayerSeasonStats {
+  season: string;
+  teamAbbrev: string;
+  gamesPlayed: number;
+  goals: number;
+  assists: number;
+  points: number;
+  plusMinus: number;
+  pim: number;
+  powerPlayGoals: number;
+  shots: number;
+  shootingPct: number;
+  avgToi: string;
+}
+
+export interface PlayerAward {
+  trophy: string;
+  seasons: string[];
+}
+
+export interface PlayerProfile {
+  playerId: number;
+  fullName: string;
+  position: string;
+  currentTeam: string;
+  recentSeasons: PlayerSeasonStats[];
+  awards: PlayerAward[];
+}
+
+// ── Box Score Types ──
+
+export interface BoxScorePlayer {
+  name: string;
+  sweaterNumber: number;
+  position: string;
+  goals: number;
+  assists: number;
+  points: number;
+  shots: number;
+  hits: number;
+  blockedShots: number;
+  toi: string;
+}
+
+export interface BoxScoreGoalie {
+  name: string;
+  sweaterNumber: number;
+  savePct: string;
+  saves: number;
+  shotsAgainst: number;
+  goalsAgainst: number;
+  toi: string;
+}
+
+export interface BoxScoreTeam {
+  abbrev: string;
+  score: number;
+  sog: number;
+  faceoffPct: string;
+  powerPlay: string;
+  pim: number;
+  hits: number;
+  blockedShots: number;
+  players: BoxScorePlayer[];
+  goalies: BoxScoreGoalie[];
+}
+
+export interface BoxScoreData {
+  gameId: number;
+  gameState: string;
+  period: number;
+  periodLabel: string;
+  timeRemaining: string;
+  away: BoxScoreTeam;
+  home: BoxScoreTeam;
 }

@@ -35,8 +35,10 @@ model PredictionRecord {
   propPick         String?
   homeGoalsPerGame Float?
   awayGoalsPerGame Float?
+  modelVersion     String   @default("v2")
   createdAt        DateTime @default(now())
 
-  @@unique([gameId, gameDate])
+  @@unique([gameId, gameDate, modelVersion])
   @@index([gameDate])
+  @@index([modelVersion])
 }

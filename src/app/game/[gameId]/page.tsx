@@ -7,7 +7,12 @@ import MetricBar from "@/components/MetricBar";
 import OverUnder from "@/components/OverUnder";
 import PlayerProp from "@/components/PlayerProp";
 import PlayerHeadshot from "@/components/PlayerHeadshot";
+import BoxScore from "@/components/BoxScore";
+import PlayerCareerCard from "@/components/PlayerCareerCard";
+import LineCombos from "@/components/LineCombos";
 import { getPredictions } from "@/lib/get-predictions";
+import { fetchBoxScore, fetchPlayerProfile } from "@/lib/nhl-api";
+import { fetchLineCombos } from "@/lib/daily-faceoff";
 import { formatGameTime, formatDate } from "@/lib/utils";
 import { TeamMetrics } from "@/lib/types";
 import { TEAM_COLORS } from "@/lib/team-colors";
@@ -21,7 +26,10 @@ export default async function GameDetailPage({
   params: Promise<{ gameId: string }>;
 }) {
   const { gameId } = await params;
-  const data = await getPredictions();
+  const [data, boxScore] = await Promise.all([
+    getPredictions(),
+    fetchBoxScore(Number(gameId)),
+  ]);
 
   if (!data) notFound();
 
@@ -32,6 +40,15 @@ export default async function GameDetailPage({
   const winner = predictedWinner === "home" ? homeTeam : awayTeam;
   const awayTopPlayer = awayTeam.topPlayers?.[0];
   const homeTopPlayer = homeTeam.topPlayers?.[0];
+
+  // Fetch career profiles + line combos in parallel
+  const playerIds = [awayTopPlayer?.playerId, homeTopPlayer?.playerId].filter(Boolean) as number[];
+  const [profiles, awayLines, homeLines] = await Promise.all([
+    Promise.all(playerIds.map((id) => fetchPlayerProfile(id))),
+    fetchLineCombos(awayTeam.teamAbbrev),
+    fetchLineCombos(homeTeam.teamAbbrev),
+  ]);
+  const profileMap = new Map(profiles.filter(Boolean).map((p) => [p!.playerId, p!]));
 
   return (
     <>
@@ -53,14 +70,46 @@ export default async function GameDetailPage({
         <div className="rounded-2xl overflow-hidden mb-8 bg-white border border-border-gray relative">
 
           {/* Game meta bar */}
-          <div className="px-6 py-2.5 flex items-center justify-between border-b border-border-gray bg-light-gray">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-charcoal">
-              {awayTeam.teamAbbrev} @ {homeTeam.teamAbbrev} &middot; {formatDate(game.gameDate)}
-            </span>
+          <div className={`px-6 py-2.5 flex items-center justify-between border-b ${game.gameStatus === "live" ? "bg-espn-red/5 border-espn-red/30" : "bg-light-gray border-border-gray"}`}>
+            <div className="flex items-center gap-2">
+              {game.gameStatus === "live" && (
+                <span className="h-2.5 w-2.5 rounded-full bg-espn-red header-pulse" />
+              )}
+              <span className={`text-[11px] font-bold uppercase tracking-widest ${game.gameStatus === "live" ? "text-espn-red" : "text-charcoal"}`}>
+                {game.gameStatus === "live" ? "LIVE" : ""} {awayTeam.teamAbbrev} @ {homeTeam.teamAbbrev} &middot; {formatDate(game.gameDate)}
+              </span>
+            </div>
             <span className="text-[11px] font-medium text-medium-gray">
-              {formatGameTime(game.startTime)} &middot; {game.venue}
+              {game.gameStatus === "live" && game.liveScore
+                ? `${game.liveScore.periodLabel} ${game.liveScore.timeRemaining}`
+                : `${formatGameTime(game.startTime)} \u00B7 ${game.venue}`}
             </span>
           </div>
+
+          {/* Live score banner */}
+          {game.gameStatus === "live" && game.liveScore && (
+            <div className="px-6 py-4 bg-charcoal flex items-center justify-center gap-8">
+              <div className="flex items-center gap-3">
+                {awayTeam.teamLogo && (
+                  <img src={awayTeam.teamLogo} alt={awayTeam.teamAbbrev} className="w-10 h-10" />
+                )}
+                <span className="font-teko text-4xl font-bold text-white">{game.liveScore.awayScore}</span>
+              </div>
+              <div className="text-center">
+                <span className="text-white/60 text-xs font-bold uppercase tracking-wider">{game.liveScore.periodLabel}</span>
+                <p className="text-white text-lg font-bold">{game.liveScore.timeRemaining}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-teko text-4xl font-bold text-white">{game.liveScore.homeScore}</span>
+                {homeTeam.teamLogo && (
+                  <img src={homeTeam.teamLogo} alt={homeTeam.teamAbbrev} className="w-10 h-10" />
+                )}
+              </div>
+              <div className="flex items-center gap-4 ml-4 text-white/50 text-xs">
+                <span>SOG: {game.liveScore.awaySog} - {game.liveScore.homeSog}</span>
+              </div>
+            </div>
+          )}
 
           {/* 3-column layout */}
           <div className="px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-stretch gap-4 sm:gap-0">
@@ -92,6 +141,9 @@ export default async function GameDetailPage({
 
             {/* Center — pick + confidence */}
             <div className="flex flex-col items-center justify-center px-2 sm:px-10 sm:min-w-[200px] py-2 sm:py-0 border-y sm:border-y-0 border-border-gray/50">
+              {game.gameStatus === "live" && (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-espn-red mb-1">Pre-Game Analysis</span>
+              )}
               <p className="font-teko text-2xl sm:text-3xl leading-none">
                 <span className="text-medium-gray font-bold">Pick: </span>
                 <span className="font-bold" style={{ color: TEAM_COLORS[winner.teamAbbrev] ?? "#232525" }}>{winner.teamAbbrev}</span>
@@ -130,6 +182,13 @@ export default async function GameDetailPage({
           </div>
         </div>
 
+        {/* Box Score — shown for live and completed games */}
+        {boxScore && (
+          <div className="mb-8">
+            <BoxScore boxScore={boxScore} />
+          </div>
+        )}
+
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -146,15 +205,36 @@ export default async function GameDetailPage({
                 <span className="text-espn-red">{homeTeam.teamAbbrev} (Home)</span>
               </div>
               <div className="space-y-1">
-                <MetricBar label="Shots For / Game" homeValue={homeTeam.shotsForPerGame} awayValue={awayTeam.shotsForPerGame} format={(v) => v.toFixed(1)} />
-                <MetricBar label="Shots Against / Game" homeValue={homeTeam.shotsAgainstPerGame} awayValue={awayTeam.shotsAgainstPerGame} format={(v) => v.toFixed(1)} />
-                <MetricBar label="Power Play %" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(1)}%`} />
-                <MetricBar label="Penalty Kill %" homeValue={homeTeam.penaltyKillPct} awayValue={awayTeam.penaltyKillPct} format={(v) => `${v.toFixed(1)}%`} />
-                <MetricBar label="Faceoff Win %" homeValue={homeTeam.faceoffWinPct} awayValue={awayTeam.faceoffWinPct} format={(v) => `${v.toFixed(1)}%`} />
+                <MetricBar label="Shots For Per Game" homeValue={homeTeam.shotsForPerGame} awayValue={awayTeam.shotsForPerGame} format={(v) => v.toFixed(1)} />
+                <MetricBar label="Shots Against Per Game" homeValue={homeTeam.shotsAgainstPerGame} awayValue={awayTeam.shotsAgainstPerGame} format={(v) => v.toFixed(1)} />
+                <MetricBar label="Power Play" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(1)}%`} />
+                <MetricBar label="Penalty Kill" homeValue={homeTeam.penaltyKillPct} awayValue={awayTeam.penaltyKillPct} format={(v) => `${v.toFixed(1)}%`} />
+                <MetricBar label="Faceoff Win" homeValue={homeTeam.faceoffWinPct} awayValue={awayTeam.faceoffWinPct} format={(v) => `${v.toFixed(1)}%`} />
                 <MetricBar label="Roster Health" homeValue={homeTeam.irImpact} awayValue={awayTeam.irImpact} />
                 <MetricBar label="Recent Form" homeValue={homeTeam.recentForm} awayValue={awayTeam.recentForm} homeLabel={homeTeam.l10Record} awayLabel={awayTeam.l10Record} />
               </div>
             </section>
+
+            {/* Player Career Context */}
+            {(profileMap.size > 0) && (
+              <section className="bg-white rounded-xl border-l-4 border-yellow-500 shadow-sm p-6">
+                <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
+                  Star Player Profiles
+                </h2>
+                <p className="text-[11px] text-medium-gray mb-4">Last 3 seasons + career awards</p>
+                <div className="space-y-4">
+                  {awayTopPlayer && profileMap.has(awayTopPlayer.playerId) && (
+                    <PlayerCareerCard profile={profileMap.get(awayTopPlayer.playerId)!} />
+                  )}
+                  {homeTopPlayer && profileMap.has(homeTopPlayer.playerId) && (
+                    <PlayerCareerCard profile={profileMap.get(homeTopPlayer.playerId)!} />
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Line Combinations */}
+            <LineCombos awayLines={awayLines} homeLines={homeLines} />
 
             {/* Scoring Stats */}
             <section className="bg-white rounded-xl border-l-4 border-accent-blue shadow-sm p-6">
@@ -194,7 +274,7 @@ export default async function GameDetailPage({
               </div>
               <p className="text-[11px] text-medium-gray mt-3">
                 Composite score includes home ice advantage for {homeTeam.teamAbbrev}.
-                Weights: Goal Diff 22%, Shots 15%, Recent Form 13%, PK% 12%, PP% 10%, Goalie 10%, IR Impact 10%, Shots Against 5%, Faceoffs 3%.
+                Weights: Goal Differential 20%, Shots 14%, Recent Form 12%, Penalty Kill 12%, Power Play 10%, Goalie 10%, Injury Impact 10%, Futures Market 5%, Shots Against 5%, Faceoffs 2%.
               </p>
             </section>
           </div>
@@ -282,10 +362,10 @@ function TeamStatCard({ team, side }: { team: TeamMetrics; side: "home" | "away"
         </span>
       </div>
       <div className="space-y-2">
-        <StatRow label="Goals For / Game" value={team.goalsForPerGame.toFixed(2)} />
-        <StatRow label="Goals Against / Game" value={team.goalsAgainstPerGame.toFixed(2)} />
+        <StatRow label="Goals For Per Game" value={team.goalsForPerGame.toFixed(2)} />
+        <StatRow label="Goals Against Per Game" value={team.goalsAgainstPerGame.toFixed(2)} />
         <StatRow
-          label="Goal Diff / Game"
+          label="Goal Differential Per Game"
           value={(team.goalsForPerGame - team.goalsAgainstPerGame).toFixed(2)}
           highlight={team.goalsForPerGame - team.goalsAgainstPerGame > 0}
         />

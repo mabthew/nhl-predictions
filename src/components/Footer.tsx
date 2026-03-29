@@ -36,9 +36,10 @@ export default function Footer() {
               Data Sources
             </h4>
             <ul className="space-y-2">
-              <li className="text-white/35">NHL API</li>
-              <li className="text-white/35">The Odds API</li>
-              <li className="text-white/35">CBS Sports Injuries</li>
+              <li><a href="https://api-web.nhle.com" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">NHL API</a></li>
+              <li><a href="https://the-odds-api.com" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">The Odds API</a></li>
+              <li><a href="https://www.cbssports.com/nhl/injuries/" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">CBS Sports Injuries</a></li>
+              <li><a href="https://www.dailyfaceoff.com/teams" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">Daily Faceoff</a></li>
             </ul>
           </div>
 
@@ -51,7 +52,7 @@ export default function Footer() {
               Got a suggestion or found a bug?
             </p>
             <div className="mt-2">
-              <FeedbackButton dark />
+              <FeedbackButton dark label="Let us know" />
             </div>
           </div>
         </div>

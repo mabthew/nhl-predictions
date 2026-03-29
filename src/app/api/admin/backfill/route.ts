@@ -1,0 +1,43 @@
+import { NextRequest, NextResponse } from "next/server";
+import { syncHistoryBatch } from "@/lib/history";
+import { getModelConfig, MODEL_REGISTRY } from "@/lib/model-configs";
+
+export const maxDuration = 300;
+
+export async function POST(request: NextRequest) {
+  const secret = request.nextUrl.searchParams.get("secret");
+  if (secret !== process.env.BACKFILL_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const modelId = body.modelId as string;
+    const batchSize = Math.min(Math.max(body.batchSize ?? 10, 1), 30);
+    const includeOdds = body.includeOdds === true;
+
+    const modelConfig = getModelConfig(modelId);
+    if (!modelConfig) {
+      return NextResponse.json(
+        { error: `Unknown model: ${modelId}`, available: MODEL_REGISTRY.map((m) => m.id) },
+        { status: 400 }
+      );
+    }
+
+    const result = await syncHistoryBatch({
+      batchSize,
+      oldestFirst: false,
+      skipOdds: !includeOdds,
+      modelVersion: modelConfig.id,
+      modelConfig,
+    });
+
+    return NextResponse.json({
+      model: modelConfig.id,
+      ...result,
+    });
+  } catch (error) {
+    console.error("Admin backfill error:", error);
+    return NextResponse.json({ error: "Backfill failed" }, { status: 500 });
+  }
+}

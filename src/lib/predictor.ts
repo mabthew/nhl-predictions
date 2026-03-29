@@ -1,5 +1,6 @@
 import {
   GamePrediction,
+  ModelConfig,
   NHLGame,
   NHLStandingsTeam,
   NHLClubStats,
@@ -8,7 +9,10 @@ import {
   TeamMetrics,
   InjuryReport,
   OddsResponse,
+  PlayerProfile,
 } from "./types";
+import { TeamLineCombos } from "./daily-faceoff";
+import { DEFAULT_MODEL } from "./model-configs";
 import { buildTeamMetrics } from "./nhl-api";
 import {
   getConsensusTotal,
@@ -16,24 +20,6 @@ import {
 } from "./odds-api";
 import { getTeamInjuries, TEAM_NAMES } from "./injuries";
 import { clamp } from "./utils";
-
-// Revised weights based on hockey analytics research:
-// - Goal differential is the most predictive single team stat
-// - Shots/game correlates with scoring chances
-// - PK% is a critical defensive metric (was missing entirely)
-// - Faceoff% has very weak correlation with winning (r < 0.1), downweighted
-// - Goalie quality has the highest single-game variance
-const WEIGHTS = {
-  goalDiffPerGame: 0.22,
-  shotsForPerGame: 0.15,
-  penaltyKillPct: 0.12,
-  powerPlayPct: 0.10,
-  recentForm: 0.13,
-  irImpact: 0.10,
-  goalie: 0.10,
-  faceoffWinPct: 0.03,
-  shotsAgainstPerGame: 0.05,
-};
 
 // League average baselines for normalization (2024-25 season)
 const LEAGUE_AVG = {
@@ -46,6 +32,7 @@ const LEAGUE_AVG = {
   recentForm: 50,
   irImpact: 85,
   goalieSavePct: 0.905,
+  futuresImpliedProb: 3.1, // 1/32 teams = ~3.1% average
 };
 
 // Standard deviations for z-score normalization
@@ -59,6 +46,7 @@ const LEAGUE_SD = {
   recentForm: 18,
   irImpact: 15,
   goalieSavePct: 0.012,
+  futuresImpliedProb: 4, // favorites ~15%, longshots ~0.5%
 };
 
 // Confidence degradation for games further in the future
@@ -73,8 +61,13 @@ export function generatePredictions(
   odds: OddsResponse[],
   playerProps: OddsResponse[],
   teamStatsMap: Map<string, NHLTeamSummaryStats>,
-  gameDayIndex?: Map<number, number>
+  gameDayIndex?: Map<number, number>,
+  futuresMap?: Map<string, number>,
+  playerProfileMap?: Map<string, PlayerProfile | null>,
+  lineCombosMap?: Map<string, TeamLineCombos | null>,
+  modelConfig?: ModelConfig
 ): GamePrediction[] {
+  const model = modelConfig ?? DEFAULT_MODEL;
   const teamMetricsMap = new Map<string, TeamMetrics>();
 
   for (const game of games) {
@@ -94,7 +87,44 @@ export function generatePredictions(
       // Look up pre-computed team stats by full name
       const teamSummary = findTeamSummary(teamStatsMap, teamFullName);
 
-      const metrics = buildTeamMetrics(standing, clubStats, teamInjuries, teamSummary);
+      const lineCombos = lineCombosMap?.get(abbrev) ?? null;
+      const metrics = buildTeamMetrics(standing, clubStats, teamInjuries, teamSummary, lineCombos);
+
+      // Add futures implied probability (gated by model config)
+      if (model.enableFutures && futuresMap) {
+        const teamFullNameLower = teamFullName.toLowerCase();
+        for (const [fName, fProb] of futuresMap) {
+          if (teamFullNameLower.includes(fName) || fName.includes(teamFullNameLower) ||
+              fName.includes(standing.teamCommonName?.default?.toLowerCase() ?? "")) {
+            metrics.futuresImpliedProb = fProb;
+            break;
+          }
+        }
+      }
+
+      // Calculate star power from player profile (gated by model config)
+      const profile = model.enableStarPower ? playerProfileMap?.get(abbrev) : undefined;
+      if (profile) {
+        let starScore = 0;
+        // Major trophy bonus
+        const majorTrophies = ["Hart", "Art Ross", "Maurice Richard", "Rocket", "Ted Lindsay", "Conn Smythe", "Norris", "Vezina"];
+        for (const award of profile.awards) {
+          if (majorTrophies.some((t) => award.trophy.includes(t))) {
+            starScore += 1;
+          }
+        }
+        // Trajectory bonus
+        if (profile.recentSeasons.length >= 2) {
+          const current = profile.recentSeasons[0];
+          const previous = profile.recentSeasons[1];
+          const currentPpg = current.gamesPlayed > 0 ? current.points / current.gamesPlayed : 0;
+          const prevPpg = previous.gamesPlayed > 0 ? previous.points / previous.gamesPlayed : 0;
+          if (currentPpg > prevPpg + 0.1) starScore += 0.5;
+          else if (currentPpg < prevPpg - 0.1) starScore -= 0.5;
+        }
+        metrics.starPower = starScore;
+      }
+
       teamMetricsMap.set(abbrev, metrics);
     }
   }
@@ -107,8 +137,8 @@ export function generatePredictions(
       return createFallbackPrediction(game);
     }
 
-    homeMetrics.compositeScore = calculateComposite(homeMetrics, true);
-    awayMetrics.compositeScore = calculateComposite(awayMetrics, false);
+    homeMetrics.compositeScore = calculateComposite(homeMetrics, true, model);
+    awayMetrics.compositeScore = calculateComposite(awayMetrics, false, model);
 
     const delta = homeMetrics.compositeScore - awayMetrics.compositeScore;
     const predictedWinner: "home" | "away" = delta >= 0 ? "home" : "away";
@@ -117,7 +147,19 @@ export function generatePredictions(
     const dayIdx = gameDayIndex?.get(game.id) ?? 0;
     const mult = DAY_CONFIDENCE_MULT[Math.min(dayIdx, 6)];
     const cap = DAY_CONFIDENCE_CAP[Math.min(dayIdx, 6)];
-    const winnerConfidence = clamp(50 + Math.abs(delta) * 3 * mult, 50, cap);
+    let winnerConfidence = clamp(50 + Math.abs(delta) * model.confidenceMultiplier * mult, 50, cap);
+
+    // Star power confidence modifier (gated by model config)
+    if (model.enableStarPower) {
+      const winnerMetrics = predictedWinner === "home" ? homeMetrics : awayMetrics;
+      const loserMetrics = predictedWinner === "home" ? awayMetrics : homeMetrics;
+      const starDiff = (winnerMetrics.starPower ?? 0) - (loserMetrics.starPower ?? 0);
+      if (starDiff > 0) {
+        winnerConfidence = clamp(winnerConfidence + Math.min(starDiff, 2), 50, cap);
+      } else if (starDiff < 0) {
+        winnerConfidence = clamp(winnerConfidence + Math.max(starDiff, -2), 50, cap);
+      }
+    }
 
     const homeName = `${game.homeTeam.placeName.default} ${game.homeTeam.commonName.default}`;
     const awayName = `${game.awayTeam.placeName.default} ${game.awayTeam.commonName.default}`;
@@ -154,6 +196,7 @@ export function generatePredictions(
       dayIndex: dayIdx,
       forecastTier: dayIdx <= 1 ? "full" : dayIdx <= 3 ? "early" : "preliminary",
       dataAvailability: { hasOdds: true, hasPlayerProps: playerProp !== null },
+      gameStatus: "upcoming",
     };
   });
 }
@@ -194,11 +237,13 @@ function zScoreNormalize(value: number, avg: number, sd: number, invert = false)
   return clamp(50 + adjusted * 20, 0, 100);
 }
 
-function calculateComposite(metrics: TeamMetrics, isHome: boolean): number {
+function calculateComposite(metrics: TeamMetrics, isHome: boolean, model: ModelConfig): number {
+  const w = model.weights;
+
   // Normalize each metric to 0-100 using league baselines
   const goalDiffScore = zScoreNormalize(metrics.goalDiffPerGame, LEAGUE_AVG.goalDiffPerGame, LEAGUE_SD.goalDiffPerGame);
   const shotsForScore = zScoreNormalize(metrics.shotsForPerGame, LEAGUE_AVG.shotsForPerGame, LEAGUE_SD.shotsForPerGame);
-  const shotsAgainstScore = zScoreNormalize(metrics.shotsAgainstPerGame, LEAGUE_AVG.shotsAgainstPerGame, LEAGUE_SD.shotsAgainstPerGame, true); // invert: fewer shots against = better
+  const shotsAgainstScore = zScoreNormalize(metrics.shotsAgainstPerGame, LEAGUE_AVG.shotsAgainstPerGame, LEAGUE_SD.shotsAgainstPerGame, true);
   const faceoffScore = zScoreNormalize(metrics.faceoffWinPct, LEAGUE_AVG.faceoffWinPct, LEAGUE_SD.faceoffWinPct);
   const ppScore = zScoreNormalize(metrics.powerPlayPct, LEAGUE_AVG.powerPlayPct, LEAGUE_SD.powerPlayPct);
   const pkScore = zScoreNormalize(metrics.penaltyKillPct, LEAGUE_AVG.penaltyKillPct, LEAGUE_SD.penaltyKillPct);
@@ -206,25 +251,31 @@ function calculateComposite(metrics: TeamMetrics, isHome: boolean): number {
   const irScore = zScoreNormalize(metrics.irImpact, LEAGUE_AVG.irImpact, LEAGUE_SD.irImpact);
 
   // Goalie score
-  let goalieScore = 50; // default to average
+  let goalieScore = 50;
   if (metrics.startingGoalieSavePct) {
     goalieScore = zScoreNormalize(metrics.startingGoalieSavePct, LEAGUE_AVG.goalieSavePct, LEAGUE_SD.goalieSavePct);
   }
 
-  let composite =
-    goalDiffScore * WEIGHTS.goalDiffPerGame +
-    shotsForScore * WEIGHTS.shotsForPerGame +
-    shotsAgainstScore * WEIGHTS.shotsAgainstPerGame +
-    faceoffScore * WEIGHTS.faceoffWinPct +
-    ppScore * WEIGHTS.powerPlayPct +
-    pkScore * WEIGHTS.penaltyKillPct +
-    formScore * WEIGHTS.recentForm +
-    irScore * WEIGHTS.irImpact +
-    goalieScore * WEIGHTS.goalie;
+  // Futures market score (only if model enables it and data exists)
+  let futuresScore = 50;
+  if (model.enableFutures && metrics.futuresImpliedProb !== undefined && metrics.futuresImpliedProb > 0) {
+    futuresScore = zScoreNormalize(metrics.futuresImpliedProb, LEAGUE_AVG.futuresImpliedProb, LEAGUE_SD.futuresImpliedProb);
+  }
 
-  // Home ice advantage: ~54% historical home win rate → +2 points
+  let composite =
+    goalDiffScore * w.goalDiffPerGame +
+    shotsForScore * w.shotsForPerGame +
+    shotsAgainstScore * w.shotsAgainstPerGame +
+    faceoffScore * w.faceoffWinPct +
+    ppScore * w.powerPlayPct +
+    pkScore * w.penaltyKillPct +
+    formScore * w.recentForm +
+    irScore * w.irImpact +
+    goalieScore * w.goalie +
+    futuresScore * w.futuresMarket;
+
   if (isHome) {
-    composite += 2;
+    composite += model.homeIceBonus;
   }
 
   return composite;
@@ -463,5 +514,6 @@ function createFallbackPrediction(game: NHLGame): GamePrediction {
     dayIndex: 0,
     forecastTier: "full",
     dataAvailability: { hasOdds: false, hasPlayerProps: false },
+    gameStatus: "upcoming",
   };
 }

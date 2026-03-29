@@ -21,21 +21,31 @@ export default function GameCard({ prediction }: GameCardProps) {
   const { homeTeam, awayTeam, predictedWinner, winnerConfidence } = prediction;
   const winnerAbbrev = predictedWinner === "home" ? homeTeam.teamAbbrev : awayTeam.teamAbbrev;
   const winnerColor = TEAM_COLORS[winnerAbbrev] ?? "#232525";
+  const isLive = prediction.gameStatus === "live";
 
   return (
     <div
       id={`game-${prediction.gameId}`}
-      className="bg-white rounded-xl shadow-sm border border-border-gray overflow-hidden hover:shadow-md transition-shadow scroll-mt-20"
+      className={`bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow scroll-mt-20 ${
+        isLive ? "border-2 border-espn-red/60 ring-1 ring-espn-red/20" : "border border-border-gray"
+      }`}
     >
       {/* Main Card — clicks go to detail page */}
       <Link href={`/game/${prediction.gameId}`} className="block">
         {/* Meta bar */}
         <div className="px-5 pt-4 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-charcoal">
-              {formatGameTime(prediction.startTime)}
-            </span>
-            {prediction.dayIndex >= 2 && (
+            {isLive ? (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-espn-red">
+                <span className="h-2 w-2 rounded-full bg-espn-red header-pulse" />
+                LIVE — {prediction.liveScore?.periodLabel} {prediction.liveScore?.timeRemaining}
+              </span>
+            ) : (
+              <span className="text-[11px] font-bold uppercase tracking-widest text-charcoal">
+                {formatGameTime(prediction.startTime)}
+              </span>
+            )}
+            {!isLive && prediction.dayIndex >= 2 && (
               <ForecastBadge tier={prediction.forecastTier} />
             )}
           </div>
@@ -54,11 +64,25 @@ export default function GameCard({ prediction }: GameCardProps) {
               </p>
               <p className="text-[11px] text-medium-gray mt-0.5">{awayTeam.teamName}</p>
             </div>
+            {isLive && prediction.liveScore && (
+              <span className="font-teko text-3xl font-bold text-charcoal ml-auto">
+                {prediction.liveScore.awayScore}
+              </span>
+            )}
           </div>
 
-          <span className="text-sm font-bold text-border-gray px-3">@</span>
+          {isLive ? (
+            <span className="text-sm font-bold text-border-gray px-3">-</span>
+          ) : (
+            <span className="text-sm font-bold text-border-gray px-3">@</span>
+          )}
 
           <div className="flex items-center gap-3 flex-1 justify-end">
+            {isLive && prediction.liveScore && (
+              <span className="font-teko text-3xl font-bold text-charcoal mr-auto">
+                {prediction.liveScore.homeScore}
+              </span>
+            )}
             <div className="text-right">
               <p className="font-teko text-2xl font-bold uppercase leading-none" style={{ color: TEAM_COLORS[homeTeam.teamAbbrev] ?? "#232525" }}>
                 {homeTeam.teamAbbrev}
@@ -71,10 +95,21 @@ export default function GameCard({ prediction }: GameCardProps) {
           </div>
         </div>
 
+        {/* Live game mini-stats */}
+        {isLive && prediction.liveScore && (
+          <div className="mx-5 mb-3 flex items-center justify-center gap-6 text-[11px] text-medium-gray">
+            <span>SOG: {prediction.liveScore.awaySog}</span>
+            <span className="text-border-gray">|</span>
+            <span>SOG: {prediction.liveScore.homeSog}</span>
+          </div>
+        )}
+
         {/* Pick zone — visually distinct */}
-        <div className="mx-4 mb-3 rounded-lg px-4 py-3.5 bg-light-gray/70">
+        <div className={`mx-4 mb-3 rounded-lg px-4 py-3.5 ${isLive ? "bg-light-gray/50 border border-border-gray" : "bg-light-gray/70"}`}>
           <div className="flex flex-col items-center mb-2">
-            <span className="text-[11px] uppercase tracking-widest text-medium-gray font-bold">Our Pick</span>
+            <span className="text-[11px] uppercase tracking-widest text-medium-gray font-bold">
+              {isLive ? "Pre-Game Pick" : "Our Pick"}
+            </span>
             <span className="font-teko text-3xl font-bold leading-none text-charcoal">
               {winnerAbbrev}
             </span>
@@ -128,11 +163,11 @@ export default function GameCard({ prediction }: GameCardProps) {
             </h3>
 
             <div className="mb-4">
-              <MetricBar label="Shots For / Game" homeValue={homeTeam.shotsForPerGame} awayValue={awayTeam.shotsForPerGame} format={(v) => v.toFixed(1)} />
-              <MetricBar label="Shots Against / Game" homeValue={homeTeam.shotsAgainstPerGame} awayValue={awayTeam.shotsAgainstPerGame} format={(v) => v.toFixed(1)} />
-              <MetricBar label="Power Play %" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(1)}%`} />
-              <MetricBar label="Penalty Kill %" homeValue={homeTeam.penaltyKillPct} awayValue={awayTeam.penaltyKillPct} format={(v) => `${v.toFixed(1)}%`} />
-              <MetricBar label="Faceoff Win %" homeValue={homeTeam.faceoffWinPct} awayValue={awayTeam.faceoffWinPct} format={(v) => `${v.toFixed(1)}%`} />
+              <MetricBar label="Shots For Per Game" homeValue={homeTeam.shotsForPerGame} awayValue={awayTeam.shotsForPerGame} format={(v) => v.toFixed(1)} />
+              <MetricBar label="Shots Against Per Game" homeValue={homeTeam.shotsAgainstPerGame} awayValue={awayTeam.shotsAgainstPerGame} format={(v) => v.toFixed(1)} />
+              <MetricBar label="Power Play" homeValue={homeTeam.powerPlayPct} awayValue={awayTeam.powerPlayPct} format={(v) => `${v.toFixed(1)}%`} />
+              <MetricBar label="Penalty Kill" homeValue={homeTeam.penaltyKillPct} awayValue={awayTeam.penaltyKillPct} format={(v) => `${v.toFixed(1)}%`} />
+              <MetricBar label="Faceoff Win" homeValue={homeTeam.faceoffWinPct} awayValue={awayTeam.faceoffWinPct} format={(v) => `${v.toFixed(1)}%`} />
               <MetricBar label="Recent Form" homeValue={homeTeam.recentForm} awayValue={awayTeam.recentForm} homeLabel={homeTeam.l10Record} awayLabel={awayTeam.l10Record} />
             </div>
 
