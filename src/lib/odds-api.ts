@@ -92,7 +92,7 @@ export async function fetchPlayerProps(): Promise<OddsResponse[]> {
     for (const event of events.slice(0, 10)) {
       try {
         const res = await oddsApiFetch(
-          `${ODDS_API_BASE}/${SPORT}/events/${event.id}/odds?apiKey=__API_KEY__&regions=us&markets=player_points&oddsFormat=american`
+          `${ODDS_API_BASE}/${SPORT}/events/${event.id}/odds?apiKey=__API_KEY__&regions=us&markets=player_goals,player_assists,player_shots_on_goal&oddsFormat=american`
         );
         if (res) {
           const data = await res.json();
@@ -165,10 +165,8 @@ export function findBestPlayerProp(
 ): PlayerPropPick | null {
   const game = propData.find(
     (g) =>
-      g.home_team.includes(homeTeam) ||
-      g.away_team.includes(awayTeam) ||
-      g.home_team.includes(awayTeam) ||
-      g.away_team.includes(homeTeam)
+      g.home_team.toLowerCase().includes(homeTeam.toLowerCase()) ||
+      g.away_team.toLowerCase().includes(awayTeam.toLowerCase())
   );
 
   if (!game || game.bookmakers.length === 0) return null;
