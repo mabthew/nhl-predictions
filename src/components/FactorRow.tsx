@@ -46,18 +46,10 @@ export default function FactorRow({ factor }: { factor: string }) {
           setOpen(!open);
         }}
       >
-        <span className="text-sm leading-none mt-px flex-none">{meta.icon}</span>
+        <span className={`text-sm leading-none mt-px flex-none transition-transform duration-150 ${open ? "rotate-90" : ""} inline-block`}>{meta.icon}</span>
         <p className="leading-snug flex-1 text-xs font-medium text-medium-gray">
           {factor}
         </p>
-        <svg
-          className={`w-3 h-3 text-medium-gray/40 flex-none mt-0.5 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
       </button>
       {open && (
         <p className="text-[11px] text-medium-gray/70 leading-relaxed ml-7 mt-1 mb-1 border-l-2 border-border-gray pl-2">

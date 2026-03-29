@@ -61,6 +61,10 @@ const LEAGUE_SD = {
   goalieSavePct: 0.012,
 };
 
+// Confidence degradation for games further in the future
+const DAY_CONFIDENCE_MULT = [1, 1, 0.85, 0.85, 0.70, 0.70, 0.55];
+const DAY_CONFIDENCE_CAP  = [95, 95, 80, 80, 70, 70, 65];
+
 export function generatePredictions(
   games: NHLGame[],
   standings: NHLStandingsTeam[],
@@ -68,7 +72,8 @@ export function generatePredictions(
   injuries: InjuryReport[],
   odds: OddsResponse[],
   playerProps: OddsResponse[],
-  teamStatsMap: Map<string, NHLTeamSummaryStats>
+  teamStatsMap: Map<string, NHLTeamSummaryStats>,
+  gameDayIndex?: Map<number, number>
 ): GamePrediction[] {
   const teamMetricsMap = new Map<string, TeamMetrics>();
 
@@ -107,7 +112,12 @@ export function generatePredictions(
 
     const delta = homeMetrics.compositeScore - awayMetrics.compositeScore;
     const predictedWinner: "home" | "away" = delta >= 0 ? "home" : "away";
-    const winnerConfidence = clamp(50 + Math.abs(delta) * 3, 50, 95);
+
+    // Apply confidence degradation for future games
+    const dayIdx = gameDayIndex?.get(game.id) ?? 0;
+    const mult = DAY_CONFIDENCE_MULT[Math.min(dayIdx, 6)];
+    const cap = DAY_CONFIDENCE_CAP[Math.min(dayIdx, 6)];
+    const winnerConfidence = clamp(50 + Math.abs(delta) * 3 * mult, 50, cap);
 
     const homeName = `${game.homeTeam.placeName.default} ${game.homeTeam.commonName.default}`;
     const awayName = `${game.awayTeam.placeName.default} ${game.awayTeam.commonName.default}`;
@@ -141,6 +151,9 @@ export function generatePredictions(
       overUnder,
       playerProp,
       keyFactors,
+      dayIndex: dayIdx,
+      forecastTier: dayIdx <= 1 ? "full" : dayIdx <= 3 ? "early" : "preliminary",
+      dataAvailability: { hasOdds: true, hasPlayerProps: playerProp !== null },
     };
   });
 }
@@ -447,5 +460,8 @@ function createFallbackPrediction(game: NHLGame): GamePrediction {
     },
     playerProp: null,
     keyFactors: ["Home ice advantage (data limited)"],
+    dayIndex: 0,
+    forecastTier: "full",
+    dataAvailability: { hasOdds: false, hasPlayerProps: false },
   };
 }

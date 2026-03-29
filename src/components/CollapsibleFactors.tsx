@@ -17,16 +17,8 @@ function FactorItem({ factor }: { factor: string }) {
         className="flex items-center gap-2 w-full text-left hover:bg-light-gray/50 rounded px-1 -mx-1 py-0.5 transition-colors"
         onClick={() => setOpen(!open)}
       >
-        <span className="text-espn-red flex-none leading-none">&#9656;</span>
+        <span className={`text-espn-red flex-none leading-none transition-transform duration-150 ${open ? "rotate-90" : ""} inline-block`}>&#9656;</span>
         <span className="text-xs text-charcoal flex-1 leading-snug">{factor}</span>
-        <svg
-          className={`w-3 h-3 text-medium-gray/40 flex-none transition-transform duration-150 ${open ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
       </button>
       {open && (
         <p className="text-[11px] text-medium-gray/70 leading-relaxed ml-5 mt-1 mb-1 border-l-2 border-border-gray pl-2">

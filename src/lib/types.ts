@@ -211,6 +211,13 @@ export interface OverUnderPrediction {
   factors: string[];
 }
 
+export type ForecastTier = "full" | "early" | "preliminary";
+
+export interface DataAvailability {
+  hasOdds: boolean;
+  hasPlayerProps: boolean;
+}
+
 export interface GamePrediction {
   gameId: number;
   gameDate: string;
@@ -223,6 +230,9 @@ export interface GamePrediction {
   overUnder: OverUnderPrediction;
   playerProp: PlayerPropPick | null;
   keyFactors: string[];
+  dayIndex: number;
+  forecastTier: ForecastTier;
+  dataAvailability: DataAvailability;
 }
 
 export interface PredictionsResponse {

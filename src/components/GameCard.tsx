@@ -9,6 +9,7 @@ import MetricBar from "./MetricBar";
 import OverUnder from "./OverUnder";
 import PlayerProp from "./PlayerProp";
 import CollapsibleFactors from "./CollapsibleFactors";
+import ForecastBadge from "./ForecastBadge";
 
 interface GameCardProps {
   prediction: GamePrediction;
@@ -30,9 +31,14 @@ export default function GameCard({ prediction }: GameCardProps) {
       <Link href={`/game/${prediction.gameId}`} className="block">
         {/* Meta bar */}
         <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-charcoal">
-            {formatDate(prediction.gameDate)} &middot; {formatGameTime(prediction.startTime)}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-charcoal">
+              {formatGameTime(prediction.startTime)}
+            </span>
+            {prediction.dayIndex >= 2 && (
+              <ForecastBadge tier={prediction.forecastTier} />
+            )}
+          </div>
           <span className="text-[10px] uppercase tracking-wider text-medium-gray/60">{prediction.venue}</span>
         </div>
 
@@ -133,7 +139,11 @@ export default function GameCard({ prediction }: GameCardProps) {
                 <PlayerProp prop={prediction.playerProp} />
               ) : (
                 <div className="bg-light-gray rounded-lg p-3 flex items-center justify-center">
-                  <p className="text-xs text-medium-gray italic">No player prop data available</p>
+                  <p className="text-xs text-medium-gray italic">
+                    {prediction.forecastTier !== "full"
+                      ? "Player props available closer to game time"
+                      : "No player prop data available"}
+                  </p>
                 </div>
               )}
             </div>

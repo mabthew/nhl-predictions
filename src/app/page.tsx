@@ -2,8 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TimeAgo from "@/components/TimeAgo";
 import Ticker from "@/components/Ticker";
-import GameCard from "@/components/GameCard";
-import { formatDate } from "@/lib/utils";
+import WeekView from "@/components/WeekView";
 import { getPredictions } from "@/lib/get-predictions";
 
 export const revalidate = 180;
@@ -20,7 +19,7 @@ export default async function Home() {
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8">
         {data && (
-          <div className="mb-8">
+          <div className="mb-6">
             <div className="flex items-center gap-3">
               <h2 className="text-2xl font-extrabold text-charcoal uppercase tracking-tight">
                 Game Predictions
@@ -33,18 +32,16 @@ export default async function Home() {
               </div>
             </div>
             <p className="text-sm text-medium-gray mt-1">
-              {formatDate(data.date)} &middot;{" "}
+              {data.predictions.length} games across{" "}
+              {new Set(data.predictions.map((p) => p.gameDate)).size} days
+              {" "}&middot;{" "}
               <TimeAgo timestamp={data.generatedAt} />
             </p>
           </div>
         )}
 
         {data && data.predictions.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            {data.predictions.map((prediction) => (
-              <GameCard key={prediction.gameId} prediction={prediction} />
-            ))}
-          </div>
+          <WeekView predictions={data.predictions} />
         ) : (
           <EmptyState />
         )}
