@@ -1,44 +1,28 @@
 import { NHLClubStats, NHLGame, PredictionsResponse } from "./types";
-import { getTomorrowDate, getTodayDate } from "./utils";
-import { fetchSchedule, fetchStandings, fetchClubStats } from "./nhl-api";
+import { fetchUpcomingGames, fetchStandings, fetchClubStats } from "./nhl-api";
 import { fetchGameOdds, fetchPlayerProps } from "./odds-api";
 import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
 
 export async function getPredictions(): Promise<PredictionsResponse | null> {
   try {
-    const today = getTodayDate();
-    const tomorrow = getTomorrowDate();
-
-    const [todayGames, tomorrowGames, standings, injuries, odds, playerProps] =
+    const [upcomingDays, standings, injuries, odds, playerProps] =
       await Promise.all([
-        fetchSchedule(today),
-        fetchSchedule(tomorrow),
+        fetchUpcomingGames(),
         fetchStandings(),
         fetchInjuries(),
         fetchGameOdds(),
         fetchPlayerProps(),
       ]);
 
-    // Filter today's games to only those that haven't started yet
-    const now = new Date();
-    const upcomingToday = todayGames.filter(
-      (g) => new Date(g.startTimeUTC) > now
-    );
-
-    // Combine: today's upcoming games + all tomorrow's games
-    let finalGames: NHLGame[] = [...upcomingToday, ...tomorrowGames];
-    let finalDate = upcomingToday.length > 0 ? today : tomorrow;
-
-    // If nothing upcoming, fall back to all of today's games (even started ones)
-    if (finalGames.length === 0 && todayGames.length > 0) {
-      finalGames = todayGames;
-      finalDate = today;
-    }
+    // Take games from the first two days that have upcoming games
+    const daysToShow = upcomingDays.slice(0, 2);
+    const finalGames: NHLGame[] = daysToShow.flatMap((d) => d.games);
+    const finalDate = daysToShow[0]?.date ?? new Date().toISOString().split("T")[0];
 
     if (finalGames.length === 0) {
       return {
-        date: tomorrow,
+        date: finalDate,
         generatedAt: new Date().toISOString(),
         predictions: [],
       };

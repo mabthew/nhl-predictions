@@ -29,6 +29,30 @@ export async function fetchSchedule(date: string): Promise<NHLGame[]> {
   }));
 }
 
+/** Fetch upcoming (FUT) games from the current week — no timezone dependency */
+export async function fetchUpcomingGames(): Promise<{ date: string; games: NHLGame[] }[]> {
+  const res = await fetch(`${NHL_API_BASE}/schedule/now`, {
+    next: { revalidate: 180 },
+    redirect: "follow",
+  });
+
+  if (!res.ok) {
+    throw new Error(`NHL schedule API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const gameWeek: { date: string; games: NHLGame[] }[] = data.gameWeek ?? [];
+
+  return gameWeek
+    .map((day) => ({
+      date: day.date,
+      games: day.games
+        .filter((g) => g.gameState === "FUT")
+        .map((g) => ({ ...g, gameDate: day.date })),
+    }))
+    .filter((day) => day.games.length > 0);
+}
+
 export async function fetchStandings(): Promise<NHLStandingsTeam[]> {
   // This endpoint returns a 307 redirect, so we follow it
   const res = await fetch(`${NHL_API_BASE}/standings/now`, {
