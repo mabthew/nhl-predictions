@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,26 +22,14 @@ export default function Header() {
       <div className="relative w-full px-4 py-3 flex items-center">
         {/* Left: Logo + Title */}
         <Link href="/" className="flex items-center gap-3 pl-[calc(2rem+15px)] sm:pl-[calc(3rem+15px)]">
-          <div
-            className="w-11 h-12 flex items-center justify-center logo-shield flex-none"
-            style={{
-              background: "linear-gradient(180deg, #e52534, #c41e2a)",
-              boxShadow:
-                "0 0 15px rgba(229,37,52,0.4), 0 0 30px rgba(229,37,52,0.15)",
-            }}
-          >
-            <span className="font-teko text-2xl font-bold text-white leading-none -mb-1">
-              N
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <h1 className="font-teko text-2xl sm:text-3xl font-bold uppercase tracking-tight leading-none">
-              NHL <span className="text-espn-red">Predictions</span>
-            </h1>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-ice-blue mt-0.5">
-              Daily Game Analysis
-            </p>
-          </div>
+          <Image
+            src="/dnhl-red.png"
+            alt="DNHL"
+            width={120}
+            height={31}
+            className="h-7 sm:h-8 w-auto"
+            priority
+          />
         </Link>
 
         <div className="flex-1" />
