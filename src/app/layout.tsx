@@ -15,9 +15,23 @@ const teko = Teko({
 });
 
 export const metadata: Metadata = {
-  title: "NHL Predictions | Daily Game Predictions & Analysis",
+  title: "DegenHL | NHL Game Predictions & Analysis",
   description:
-    "AI-powered NHL game predictions with betting analysis, player props, and detailed matchup breakdowns.",
+    "Daily NHL game picks, over/under predictions, and player props with detailed matchup breakdowns.",
+  metadataBase: new URL("https://degenhl.com"),
+  openGraph: {
+    title: "DegenHL | NHL Game Predictions",
+    description:
+      "Daily NHL picks, over/under predictions, and player props with detailed matchup breakdowns.",
+    siteName: "DegenHL",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DegenHL | NHL Game Predictions",
+    description:
+      "Daily NHL picks, over/under predictions, and player props.",
+  },
 };
 
 export default function RootLayout({
