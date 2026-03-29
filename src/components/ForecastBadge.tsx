@@ -22,7 +22,7 @@ export default function ForecastBadge({ tier }: { tier: ForecastTier }) {
   const config = TIER_CONFIG[tier];
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${config.className}`}
+      className={`inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${config.className}`}
     >
       <span className="text-[8px] leading-none">{config.icon}</span>
       {config.label}

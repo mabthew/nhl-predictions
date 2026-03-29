@@ -192,7 +192,7 @@ export default async function GameDetailPage({
                   </div>
                 </div>
               </div>
-              <p className="text-[10px] text-medium-gray mt-3">
+              <p className="text-[11px] text-medium-gray mt-3">
                 Composite score includes home ice advantage for {homeTeam.teamAbbrev}.
                 Weights: Goal Diff 22%, Shots 15%, Recent Form 13%, PK% 12%, PP% 10%, Goalie 10%, IR Impact 10%, Shots Against 5%, Faceoffs 3%.
               </p>
@@ -224,8 +224,8 @@ export default async function GameDetailPage({
               <OverUnder overUnder={game.overUnder} />
               {game.overUnder.factors.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-border-gray">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-medium-gray mb-2">
-                    O/U Factors
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-medium-gray mb-2">
+                    Over/Under Factors
                   </p>
                   <ul className="space-y-1">
                     {game.overUnder.factors.map((factor, i) => (
@@ -277,7 +277,7 @@ function TeamStatCard({ team, side }: { team: TeamMetrics; side: "home" | "away"
           <img src={team.teamLogo} alt={team.teamAbbrev} className="w-6 h-6" />
         )}
         <span className={`text-sm font-bold ${accentColor}`}>{team.teamAbbrev}</span>
-        <span className="text-[10px] uppercase tracking-wider text-medium-gray">
+        <span className="text-[11px] uppercase tracking-wider text-medium-gray">
           {side === "home" ? "Home" : "Away"}
         </span>
       </div>

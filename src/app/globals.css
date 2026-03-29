@@ -23,29 +23,7 @@ body {
   font-family: var(--font-poppins);
 }
 
-/* Ticker tape animation */
-@keyframes ticker-scroll {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-ticker {
-  animation: ticker-scroll 12s linear infinite;
-}
-
-@media (min-width: 640px) {
-  .animate-ticker {
-    animation-duration: 22s;
-  }
-}
-
-.animate-ticker:hover {
-  animation-play-state: paused;
-}
+/* Ticker scroll — driven by requestAnimationFrame in Ticker.tsx */
 
 /* Header broadcast texture */
 .header-texture {

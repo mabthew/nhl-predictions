@@ -340,29 +340,7 @@ export async function getAccuracyTimeline(): Promise<AccuracyPoint[]> {
     games: stats.total,
   }));
 
-  if (dailyPoints.length <= 7) return dailyPoints;
-
-  const rolling: AccuracyPoint[] = [];
-  for (let i = 6; i < dailyPoints.length; i++) {
-    const window = dailyPoints.slice(i - 6, i + 1);
-    const totalGames = window.reduce((s, p) => s + p.games, 0);
-    const totalWinnerCorrect = window.reduce(
-      (s, p) => s + Math.round((p.winnerPct / 100) * p.games),
-      0
-    );
-    const totalOuCorrect = window.reduce(
-      (s, p) => s + Math.round((p.ouPct / 100) * p.games),
-      0
-    );
-    rolling.push({
-      date: dailyPoints[i].date,
-      winnerPct: totalGames > 0 ? Math.round((totalWinnerCorrect / totalGames) * 100) : 50,
-      ouPct: totalGames > 0 ? Math.round((totalOuCorrect / totalGames) * 100) : 50,
-      games: dailyPoints[i].games,
-    });
-  }
-
-  return rolling;
+  return dailyPoints;
 }
 
 export async function getOverallStats(): Promise<{

@@ -31,7 +31,7 @@ export default function DaySectionHeader({
     >
       <div className="flex items-center gap-3">
         {isToday && (
-          <span className="text-[10px] font-bold uppercase tracking-widest text-espn-red bg-espn-red/10 px-2 py-0.5 rounded">
+          <span className="text-[11px] font-bold uppercase tracking-widest text-espn-red bg-espn-red/10 px-2 py-0.5 rounded">
             Today
           </span>
         )}

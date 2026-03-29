@@ -86,7 +86,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
               </span>{" "}
               GPG
             </span>
-            <span className="text-[10px] uppercase tracking-wider">Season Avg</span>
+            <span className="text-[11px] uppercase tracking-wider">Season Avg</span>
             <span>
               {game.homeAbbrev}{" "}
               <span className="font-semibold text-charcoal">
@@ -119,7 +119,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
         {/* Player prop */}
         {game.propPlayer && (
           <div className="text-[11px] flex items-center gap-1.5">
-            <span className="bg-charcoal text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded">
+            <span className="bg-charcoal text-white text-[11px] font-bold uppercase px-1.5 py-0.5 rounded">
               Prop
             </span>
             <span className="text-medium-gray">

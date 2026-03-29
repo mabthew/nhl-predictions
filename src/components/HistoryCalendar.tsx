@@ -105,7 +105,7 @@ export default function HistoryCalendar({
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-1 mb-1">
             {DAY_LABELS.map((d) => (
-              <div key={d} className="text-[10px] font-semibold text-medium-gray text-center py-1">
+              <div key={d} className="text-[11px] font-semibold text-medium-gray text-center py-1">
                 {d}
               </div>
             ))}
@@ -160,15 +160,15 @@ export default function HistoryCalendar({
           <div className="flex items-center justify-center gap-3 mt-3 pt-3 border-t border-border-gray">
             <div className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              <span className="text-[9px] text-medium-gray">60%+</span>
+              <span className="text-[11px] text-medium-gray">60%+</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
-              <span className="text-[9px] text-medium-gray">50-59%</span>
+              <span className="text-[11px] text-medium-gray">50-59%</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-espn-red" />
-              <span className="text-[9px] text-medium-gray">&lt;50%</span>
+              <span className="text-[11px] text-medium-gray">&lt;50%</span>
             </div>
           </div>
         </div>
@@ -199,7 +199,7 @@ export default function HistoryCalendar({
                   </span>
                 </span>
                 <span className="text-xs text-medium-gray">
-                  O/U:{" "}
+                  Over/Under:{" "}
                   <span
                     className={`font-bold ${
                       selectedDayData.ouAccuracy >= 60

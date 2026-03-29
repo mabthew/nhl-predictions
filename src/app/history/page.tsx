@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AccuracyChart from "@/components/AccuracyChart";
 import HistoryCalendar from "@/components/HistoryCalendar";
+import Indicator from "@/components/Indicator";
 import {
   syncHistoryBatch,
   getOverallStats,
@@ -116,32 +117,30 @@ export default async function HistoryPage() {
                 <p className="font-teko text-4xl font-bold leading-none">
                   {stats.totalGames}
                 </p>
-                <p className="text-[10px] uppercase tracking-widest text-white/40 mt-1">
+                <p className="text-[11px] uppercase tracking-widest text-white/35 mt-1">
                   Games Tracked
                 </p>
               </div>
               <div>
-                <p className={`font-teko text-4xl font-bold leading-none ${
-                  stats.winnerPct > 50 ? "text-green-400" : "text-espn-red"
-                }`}>
+                <p className="font-teko text-4xl font-bold leading-none text-white flex items-center justify-center gap-2">
                   {stats.winnerPct}%
+                  <Indicator above={stats.winnerPct > 50} />
                 </p>
-                <p className="text-[10px] uppercase tracking-widest text-white/40 mt-1">
+                <p className="text-[11px] uppercase tracking-widest text-white/35 mt-1">
                   Winner Accuracy
                 </p>
               </div>
               <div>
-                <p className={`font-teko text-4xl font-bold leading-none ${
-                  stats.ouPct > 50 ? "text-green-400" : "text-espn-red"
-                }`}>
+                <p className="font-teko text-4xl font-bold leading-none text-white flex items-center justify-center gap-2">
                   {stats.ouPct}%
+                  <Indicator above={stats.ouPct > 50} />
                 </p>
-                <p className="text-[10px] uppercase tracking-widest text-white/40 mt-1">
-                  O/U Accuracy
+                <p className="text-[11px] uppercase tracking-widest text-white/35 mt-1">
+                  Over/Under Accuracy
                 </p>
               </div>
             </div>
-            <p className="text-[10px] text-white/30 text-center mt-4">
+            <p className="text-[11px] text-white/35 text-center mt-4">
               Predictions use current season statistics. Past accuracy is
               retroactive and may differ from real-time predictions.
             </p>

@@ -59,22 +59,21 @@ export default function DateStrip({ dates, activeDate, onDateSelect }: DateStrip
               ref={isActive ? activeRef : undefined}
               onClick={() => onDateSelect(d.date)}
               className={`flex-none flex flex-col items-center px-4 py-2 rounded-lg transition-colors relative ${
+                d.isToday ? "ring-2 ring-espn-red" : ""
+              } ${
                 isActive
                   ? "bg-charcoal text-white"
                   : `bg-light-gray hover:bg-border-gray text-charcoal ${tierOpacity}`
               }`}
             >
-              {d.isToday && (
-                <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-espn-red" />
-              )}
-              <span className="text-[10px] font-bold uppercase tracking-wider leading-none">
+              <span className="text-[11px] font-bold uppercase tracking-wider leading-none">
                 {formatPillDay(d.date)}
               </span>
               <span className="text-lg font-bold font-teko leading-none mt-0.5">
                 {formatPillDate(d.date)}
               </span>
               <span
-                className={`text-[9px] font-semibold leading-none mt-1 ${
+                className={`text-[11px] font-semibold leading-none mt-1 ${
                   isActive ? "text-white/60" : "text-medium-gray"
                 }`}
               >

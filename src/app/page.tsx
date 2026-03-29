@@ -22,7 +22,7 @@ export default async function Home() {
           <div className="mb-6">
             <div className="flex items-center gap-3">
               <h2 className="text-2xl font-extrabold text-charcoal uppercase tracking-tight">
-                Game Predictions
+                This Week's Slate
               </h2>
               <div className="flex items-center gap-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-espn-red header-pulse" />
@@ -32,7 +32,7 @@ export default async function Home() {
               </div>
             </div>
             <p className="text-sm text-medium-gray mt-1">
-              {data.predictions.length} games across{" "}
+              {data.predictions.length} games coming up in the next{" "}
               {new Set(data.predictions.map((p) => p.gameDate)).size} days
               {" "}&middot;{" "}
               <TimeAgo timestamp={data.generatedAt} />

@@ -47,7 +47,7 @@ export default function HistoryTabs({ days }: HistoryTabsProps) {
             >
               <span className="block">{dateLabel}</span>
               <span
-                className={`block text-[10px] mt-0.5 ${
+                className={`block text-[11px] mt-0.5 ${
                   isActive ? "text-white/60" : "text-medium-gray/60"
                 }`}
               >
@@ -76,7 +76,7 @@ export default function HistoryTabs({ days }: HistoryTabsProps) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-medium-gray">
-            O/U Picks:
+            Over/Under Picks:
           </span>
           <span
             className={`text-sm font-bold ${

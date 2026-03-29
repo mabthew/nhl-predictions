@@ -9,42 +9,22 @@ export default function Header() {
 
   return (
     <header className="relative bg-header-dark text-white overflow-hidden">
-      {/* ESPN-style diagonal red accent — left edge */}
+      {/* Bold diagonal red accent — single clean cut */}
       <div
         className="absolute left-0 top-0 bottom-0 z-0"
         style={{
-          width: "max(35px, 2%)",
-          background: "linear-gradient(180deg, #e52534, #c41e2a)",
-          clipPath: "polygon(0 0, 85% 0, 50% 100%, 0 100%)",
-        }}
-      />
-      {/* Darker sliver for depth */}
-      <div
-        className="absolute top-0 bottom-0 z-0"
-        style={{
-          width: "max(50px, 3%)",
-          background: "linear-gradient(180deg, #c41e2a, #8b1520)",
+          width: "max(45px, 3%)",
+          background: "linear-gradient(160deg, #e52534 0%, #c41e2a 100%)",
           clipPath: "polygon(0 0, 100% 0, 40% 100%, 0 100%)",
-          opacity: 0.8,
         }}
       />
-      {/* Darkest sliver for depth */}
+      {/* Subtle darker edge for depth */}
       <div
         className="absolute left-0 top-0 bottom-0 z-0"
         style={{
-          width: "max(65px, 4%)",
-          background: "linear-gradient(180deg, #8b1520, #7c101a)",
-          clipPath: "polygon(0 0, 100% 0, 30% 100%, 0 100%)",
-          opacity: 0.6,
-        }}
-      />
-      {/* Darkest sliver for depth */}
-      <div
-        className="absolute left-0 top-0 bottom-0 z-0"
-        style={{
-          width: "max(80px, 5%)",
-          background: "linear-gradient(180deg, #7c101a, #6a0d15)",
-          clipPath: "polygon(0 0, 100% 0, 20% 100%, 0 100%)",
+          width: "max(65px, 4.5%)",
+          background: "linear-gradient(160deg, #b51e28 0%, #8b1520 100%)",
+          clipPath: "polygon(0 0, 100% 0, 40% 100%, 0 100%)",
           opacity: 0.4,
         }}
       />
@@ -69,7 +49,7 @@ export default function Header() {
             priority
           />
           <div className="hidden sm:block border-l border-white/20 pl-4">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50 leading-none">
+            <span className="text-[9px] font-normal uppercase tracking-[0.2em] text-white/35 leading-none">
               Smart picks. Dumb money.
             </span>
           </div>

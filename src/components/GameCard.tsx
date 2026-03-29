@@ -39,7 +39,7 @@ export default function GameCard({ prediction }: GameCardProps) {
               <ForecastBadge tier={prediction.forecastTier} />
             )}
           </div>
-          <span className="text-[10px] uppercase tracking-wider text-medium-gray/60">{prediction.venue}</span>
+          <span className="text-[11px] uppercase tracking-wider text-medium-gray/60">{prediction.venue}</span>
         </div>
 
         {/* Matchup row */}
@@ -52,7 +52,7 @@ export default function GameCard({ prediction }: GameCardProps) {
               <p className="font-teko text-2xl font-bold uppercase leading-none" style={{ color: TEAM_COLORS[awayTeam.teamAbbrev] ?? "#232525" }}>
                 {awayTeam.teamAbbrev}
               </p>
-              <p className="text-[10px] text-medium-gray mt-0.5">{awayTeam.teamName}</p>
+              <p className="text-[11px] text-medium-gray mt-0.5">{awayTeam.teamName}</p>
             </div>
           </div>
 
@@ -63,7 +63,7 @@ export default function GameCard({ prediction }: GameCardProps) {
               <p className="font-teko text-2xl font-bold uppercase leading-none" style={{ color: TEAM_COLORS[homeTeam.teamAbbrev] ?? "#232525" }}>
                 {homeTeam.teamAbbrev}
               </p>
-              <p className="text-[10px] text-medium-gray mt-0.5">{homeTeam.teamName}</p>
+              <p className="text-[11px] text-medium-gray mt-0.5">{homeTeam.teamName}</p>
             </div>
             {homeTeam.teamLogo && (
               <img src={homeTeam.teamLogo} alt={homeTeam.teamAbbrev} className="w-12 h-12" />
@@ -74,7 +74,7 @@ export default function GameCard({ prediction }: GameCardProps) {
         {/* Pick zone — visually distinct */}
         <div className="mx-4 mb-3 rounded-lg px-4 py-3.5 bg-light-gray/70">
           <div className="flex flex-col items-center mb-2">
-            <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Our Pick</span>
+            <span className="text-[11px] uppercase tracking-widest text-medium-gray font-bold">Our Pick</span>
             <span className="font-teko text-3xl font-bold leading-none text-charcoal">
               {winnerAbbrev}
             </span>
@@ -94,14 +94,17 @@ export default function GameCard({ prediction }: GameCardProps) {
         </div>
       )}
 
-      {/* Expand arrow */}
+      {/* Expand bar */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex justify-center py-2 hover:bg-light-gray/50 transition-colors border-t border-border-gray/50"
+        className="w-full flex items-center justify-center gap-1.5 py-2.5 hover:bg-light-gray transition-colors border-t border-border-gray/50"
         aria-label="Toggle quick view"
       >
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-medium-gray">
+          {expanded ? "Hide" : "Quick View"}
+        </span>
         <svg
-          className={`w-4 h-4 text-medium-gray transition-transform duration-200 ${
+          className={`w-3.5 h-3.5 text-medium-gray transition-transform duration-200 ${
             expanded ? "rotate-180" : ""
           }`}
           fill="none"

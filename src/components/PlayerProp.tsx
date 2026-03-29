@@ -19,7 +19,7 @@ export default function PlayerProp({ prop }: PlayerPropProps) {
           Best Player Prop
         </span>
         <span
-          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${riskColors[prop.riskLevel]}`}
+          className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded-full border ${riskColors[prop.riskLevel]}`}
         >
           {prop.riskLevel} Risk
         </span>
