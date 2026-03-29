@@ -111,7 +111,35 @@ export async function syncHistoryBatch(
   const processedDates: string[] = [];
 
   for (const { date, completedGames } of scheduleResults) {
-    if (completedGames.length === 0) continue;
+    if (completedGames.length === 0) {
+      // Insert a sentinel so this date is not retried
+      await prisma.predictionRecord.upsert({
+        where: { gameId_gameDate: { gameId: 0, gameDate: date } },
+        update: {},
+        create: {
+          gameId: 0,
+          gameDate: date,
+          homeAbbrev: "",
+          homeName: "",
+          homeLogo: "",
+          homeScore: 0,
+          awayAbbrev: "",
+          awayName: "",
+          awayLogo: "",
+          awayScore: 0,
+          predictedWinner: "home",
+          actualWinner: "home",
+          winnerCorrect: false,
+          winnerConfidence: 0,
+          ouLine: 0,
+          ouPrediction: "UNDER",
+          actualTotal: 0,
+          ouCorrect: false,
+        },
+      });
+      processedDates.push(date);
+      continue;
+    }
 
     try {
       const predictions = generatePredictions(
@@ -258,7 +286,7 @@ export async function getHistoryForDate(
   date: string
 ): Promise<HistoryDay | null> {
   const records = await prisma.predictionRecord.findMany({
-    where: { gameDate: date },
+    where: { gameDate: date, gameId: { not: 0 } },
   });
   if (records.length === 0) return null;
 
@@ -282,6 +310,7 @@ export interface AccuracyPoint {
 
 export async function getAccuracyTimeline(): Promise<AccuracyPoint[]> {
   const records = await prisma.predictionRecord.findMany({
+    where: { gameId: { not: 0 } },
     orderBy: { gameDate: "asc" },
   });
 
@@ -340,7 +369,9 @@ export async function getOverallStats(): Promise<{
   ouPct: number;
   syncedDates: string[];
 }> {
-  const records = await prisma.predictionRecord.findMany();
+  const records = await prisma.predictionRecord.findMany({
+    where: { gameId: { not: 0 } },
+  });
   const totalGames = records.length;
   const winnerCorrect = records.filter((r) => r.winnerCorrect).length;
   const ouCorrect = records.filter((r) => r.ouCorrect).length;

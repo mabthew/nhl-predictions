@@ -29,6 +29,7 @@ export default async function HistoryPage() {
     ]);
 
     const allRecords = await prisma.predictionRecord.findMany({
+      where: { gameId: { not: 0 } },
       orderBy: { gameDate: "desc" },
     });
 
@@ -96,11 +97,6 @@ export default async function HistoryPage() {
           <p className="text-sm text-medium-gray mt-1">
             How our predictions performed against actual results
           </p>
-          {remaining > 0 && (
-            <p className="text-xs text-ice-blue mt-1">
-              Syncing season data... {remaining} days remaining. Refresh to sync more.
-            </p>
-          )}
         </div>
 
         {!dbAvailable && (
@@ -126,7 +122,7 @@ export default async function HistoryPage() {
               </div>
               <div>
                 <p className={`font-teko text-4xl font-bold leading-none ${
-                  stats.winnerPct >= 55 ? "text-green-400" : "text-espn-red"
+                  stats.winnerPct > 50 ? "text-green-400" : "text-espn-red"
                 }`}>
                   {stats.winnerPct}%
                 </p>
@@ -136,7 +132,7 @@ export default async function HistoryPage() {
               </div>
               <div>
                 <p className={`font-teko text-4xl font-bold leading-none ${
-                  stats.ouPct >= 55 ? "text-green-400" : "text-espn-red"
+                  stats.ouPct > 50 ? "text-green-400" : "text-espn-red"
                 }`}>
                   {stats.ouPct}%
                 </p>

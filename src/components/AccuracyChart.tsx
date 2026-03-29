@@ -74,7 +74,7 @@ export default function AccuracyChart({ data }: AccuracyChartProps) {
           <Line
             type="monotone"
             dataKey="winnerPct"
-            stroke="#22c55e"
+            stroke="#3b82f6"
             strokeWidth={2}
             dot={false}
             name="winnerPct"
@@ -82,7 +82,7 @@ export default function AccuracyChart({ data }: AccuracyChartProps) {
           <Line
             type="monotone"
             dataKey="ouPct"
-            stroke="#e52534"
+            stroke="#f59e0b"
             strokeWidth={2}
             dot={false}
             name="ouPct"
@@ -91,11 +91,11 @@ export default function AccuracyChart({ data }: AccuracyChartProps) {
       </ResponsiveContainer>
       <div className="flex items-center justify-center gap-6 mt-2">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-green-500 rounded" />
+          <div className="w-3 h-0.5 bg-blue-500 rounded" />
           <span className="text-[10px] text-medium-gray">Winner Picks (7-day avg)</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-0.5 bg-espn-red rounded" />
+          <div className="w-3 h-0.5 bg-amber-500 rounded" />
           <span className="text-[10px] text-medium-gray">O/U Picks (7-day avg)</span>
         </div>
       </div>
