@@ -4,8 +4,10 @@ import { fetchGameOdds, fetchPlayerProps } from "./odds-api";
 import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
 import { prisma } from "./db";
+import { HISTORY_MODEL } from "./model-configs";
 
 const SEASON_START = "2025-10-04";
+const MODEL_VERSION = HISTORY_MODEL.id;
 const BATCH_SIZE = 7; // days per batch to avoid timeouts
 
 function getDateRange(startDate: string, endDate: string): string[] {
@@ -18,10 +20,8 @@ function getDateRange(startDate: string, endDate: string): string[] {
   return dates;
 }
 
-function getYesterday(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split("T")[0];
+function getToday(): string {
+  return new Date().toISOString().split("T")[0];
 }
 
 export interface SyncOptions {
@@ -47,17 +47,25 @@ export async function syncHistoryBatch(
 ): Promise<SyncResult> {
   const batchSize = options?.batchSize ?? BATCH_SIZE;
   const oldestFirst = options?.oldestFirst ?? false;
-  const modelVersion = options?.modelVersion ?? "v2";
+  const modelVersion = options?.modelVersion ?? MODEL_VERSION;
 
-  const allDates = getDateRange(SEASON_START, getYesterday());
+  const allDates = getDateRange(SEASON_START, getToday());
 
-  const existingDates = await prisma.predictionRecord.groupBy({
+  const existingRecords = await prisma.predictionRecord.groupBy({
     by: ["gameDate"],
-    where: { modelVersion },
+    where: { modelVersion, gameId: { not: 0 } },
   });
-  const syncedDates = new Set(existingDates.map((d) => d.gameDate));
+  const syncedWithGames = new Set(existingRecords.map((d) => d.gameDate));
 
-  const datesToSync = allDates.filter((d) => !syncedDates.has(d));
+  // Re-check recent dates (last 3 days) even if they only have a sentinel,
+  // since games may not have been completed when the sentinel was written.
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  const recentCutoff = threeDaysAgo.toISOString().split("T")[0];
+
+  const datesToSync = allDates.filter(
+    (d) => !syncedWithGames.has(d) || d >= recentCutoff
+  );
   if (datesToSync.length === 0)
     return { processed: 0, remaining: 0, dates: [] };
 
@@ -116,35 +124,42 @@ export async function syncHistoryBatch(
 
   for (const { date, completedGames } of scheduleResults) {
     if (completedGames.length === 0) {
-      // Insert a sentinel so this date is not retried
-      await prisma.predictionRecord.upsert({
-        where: { gameId_gameDate_modelVersion: { gameId: 0, gameDate: date, modelVersion } },
-        update: {},
-        create: {
-          gameId: 0,
-          gameDate: date,
-          homeAbbrev: "",
-          homeName: "",
-          homeLogo: "",
-          homeScore: 0,
-          awayAbbrev: "",
-          awayName: "",
-          awayLogo: "",
-          awayScore: 0,
-          predictedWinner: "home",
-          actualWinner: "home",
-          winnerCorrect: false,
-          winnerConfidence: 0,
-          ouLine: 0,
-          ouPrediction: "UNDER",
-          actualTotal: 0,
-          ouCorrect: false,
-          modelVersion,
-        },
-      });
+      // Only sentinel old dates — recent dates will be rechecked
+      if (date < recentCutoff) {
+        await prisma.predictionRecord.upsert({
+          where: { gameId_gameDate_modelVersion: { gameId: 0, gameDate: date, modelVersion } },
+          update: {},
+          create: {
+            gameId: 0,
+            gameDate: date,
+            homeAbbrev: "",
+            homeName: "",
+            homeLogo: "",
+            homeScore: 0,
+            awayAbbrev: "",
+            awayName: "",
+            awayLogo: "",
+            awayScore: 0,
+            predictedWinner: "home",
+            actualWinner: "home",
+            winnerCorrect: false,
+            winnerConfidence: 0,
+            ouLine: 0,
+            ouPrediction: "UNDER",
+            actualTotal: 0,
+            ouCorrect: false,
+            modelVersion,
+          },
+        });
+      }
       processedDates.push(date);
       continue;
     }
+
+    // Remove stale sentinel if real games are now available
+    await prisma.predictionRecord.deleteMany({
+      where: { gameId: 0, gameDate: date, modelVersion },
+    });
 
     try {
       const teamStatsMap = await fetchTeamStats();
@@ -177,7 +192,18 @@ export async function syncHistoryBatch(
           where: {
             gameId_gameDate_modelVersion: { gameId: pred.gameId, gameDate: date, modelVersion },
           },
-          update: {},
+          update: {
+            homeScore,
+            awayScore,
+            actualWinner,
+            winnerCorrect: pred.predictedWinner === actualWinner,
+            actualTotal,
+            ouCorrect:
+              (pred.overUnder.prediction === "OVER" &&
+                actualTotal > pred.overUnder.line) ||
+              (pred.overUnder.prediction === "UNDER" &&
+                actualTotal < pred.overUnder.line),
+          },
           create: {
             gameId: pred.gameId,
             gameDate: date,
@@ -297,7 +323,7 @@ export interface HistoryDay {
 
 export async function getHistoryForDate(
   date: string,
-  modelVersion = "v2"
+  modelVersion = MODEL_VERSION
 ): Promise<HistoryDay | null> {
   const records = await prisma.predictionRecord.findMany({
     where: { gameDate: date, gameId: { not: 0 }, modelVersion },
@@ -322,7 +348,7 @@ export interface AccuracyPoint {
   games: number;
 }
 
-export async function getAccuracyTimeline(modelVersion = "v2"): Promise<AccuracyPoint[]> {
+export async function getAccuracyTimeline(modelVersion = MODEL_VERSION): Promise<AccuracyPoint[]> {
   const records = await prisma.predictionRecord.findMany({
     where: { gameId: { not: 0 }, modelVersion },
     orderBy: { gameDate: "asc" },
@@ -355,7 +381,7 @@ export async function getAccuracyTimeline(modelVersion = "v2"): Promise<Accuracy
   return dailyPoints;
 }
 
-export async function getOverallStats(modelVersion = "v2"): Promise<{
+export async function getOverallStats(modelVersion = MODEL_VERSION): Promise<{
   totalGames: number;
   winnerPct: number;
   ouPct: number;
