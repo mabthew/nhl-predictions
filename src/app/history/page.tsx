@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import AccuracyChart from "@/components/AccuracyChart";
 import HistoryCalendar from "@/components/HistoryCalendar";
 import Indicator from "@/components/Indicator";
+import ModelSwitcher from "@/components/ModelSwitcher";
 import {
   syncHistoryBatch,
   getOverallStats,
@@ -10,10 +11,22 @@ import {
   HistoryDay,
 } from "@/lib/history";
 import { prisma } from "@/lib/db";
+import { HISTORY_MODEL, MODEL_REGISTRY, getModelConfig } from "@/lib/model-configs";
+import { getSession } from "@/lib/auth";
 
 export const revalidate = 900;
 
-export default async function HistoryPage() {
+export default async function HistoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ model?: string }>;
+}) {
+  const params = await searchParams;
+  const session = await getSession();
+  const isAdmin = !!session;
+  const selectedModelId = params.model ?? HISTORY_MODEL.id;
+  const selectedModel = getModelConfig(selectedModelId) ?? HISTORY_MODEL;
+  const modelVersion = selectedModel.id;
   let remaining = 0;
   let stats = { totalGames: 0, winnerPct: 0, ouPct: 0, syncedDates: [] as string[] };
   let timeline: { date: string; winnerPct: number; ouPct: number; games: number }[] = [];
@@ -25,12 +38,12 @@ export default async function HistoryPage() {
     remaining = syncResult.remaining;
 
     [stats, timeline] = await Promise.all([
-      getOverallStats(),
-      getAccuracyTimeline(),
+      getOverallStats(modelVersion),
+      getAccuracyTimeline(modelVersion),
     ]);
 
     const allRecords = await prisma.predictionRecord.findMany({
-      where: { gameId: { not: 0 } },
+      where: { gameId: { not: 0 }, modelVersion },
       orderBy: { gameDate: "desc" },
     });
 
@@ -91,13 +104,21 @@ export default async function HistoryPage() {
       <Header />
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8">
-        <div className="mb-8">
-          <h2 className="font-teko text-3xl font-bold text-charcoal uppercase tracking-tight">
-            Prediction History
-          </h2>
-          <p className="text-sm text-medium-gray mt-1">
-            How our predictions performed against actual results
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h2 className="font-teko text-3xl font-bold text-charcoal uppercase tracking-tight">
+              Prediction History
+            </h2>
+            <p className="text-sm text-medium-gray mt-1">
+              How our predictions performed against actual results
+            </p>
+          </div>
+          {isAdmin && (
+            <ModelSwitcher
+              models={MODEL_REGISTRY.map((m) => ({ id: m.id, name: m.name }))}
+              currentModelId={modelVersion}
+            />
+          )}
         </div>
 
         {!dbAvailable && (

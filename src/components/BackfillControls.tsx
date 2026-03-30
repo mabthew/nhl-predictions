@@ -15,10 +15,8 @@ interface BackfillStatus {
 }
 
 export default function BackfillControls({
-  secret,
   modelIds,
 }: {
-  secret: string;
   modelIds: string[];
 }) {
   const [selectedModel, setSelectedModel] = useState(modelIds[1] ?? modelIds[0] ?? "v2");
@@ -33,14 +31,14 @@ export default function BackfillControls({
   const stopRef = useRef(false);
 
   const fetchStatus = useCallback(() => {
-    return fetch(`/api/admin/backfill/status?secret=${secret}`)
+    return fetch(`/api/admin/backfill/status`)
       .then((r) => r.json())
       .then((s: BackfillStatus) => {
         setStatus(s);
         return s;
       })
       .catch(() => null);
-  }, [secret]);
+  }, []);
 
   useEffect(() => {
     fetchStatus();
@@ -71,7 +69,7 @@ export default function BackfillControls({
       batch++;
       setBatchNum(batch);
       try {
-        const res = await fetch(`/api/admin/backfill?secret=${secret}`, {
+        const res = await fetch(`/api/admin/backfill`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ modelId: selectedModel, batchSize: 30, includeOdds }),
@@ -97,7 +95,7 @@ export default function BackfillControls({
     // Refresh status from DB for accurate final state
     await fetchStatus();
     setLiveRemaining(null);
-  }, [secret, selectedModel, includeOdds, remaining, fetchStatus]);
+  }, [selectedModel, includeOdds, remaining, fetchStatus]);
 
   // Reset live state when model changes
   useEffect(() => {

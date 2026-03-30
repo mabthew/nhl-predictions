@@ -19,11 +19,6 @@ function getDateRange(start: string, end: string): string[] {
 }
 
 export async function GET(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get("secret");
-  if (secret !== process.env.BACKFILL_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   // Support single date or date range
   const singleDate = request.nextUrl.searchParams.get("date");
   const startDate = request.nextUrl.searchParams.get("startDate");

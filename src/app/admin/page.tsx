@@ -1,22 +1,15 @@
-import { notFound } from "next/navigation";
 import { MODEL_REGISTRY } from "@/lib/model-configs";
 import { getAccuracyByModel, getAccuracyTimeline } from "@/lib/history";
 import ModelComparison from "@/components/ModelComparison";
 import BackfillControls from "@/components/BackfillControls";
 import ModelAccuracyChart from "@/components/ModelAccuracyChart";
+import LogoutButton from "@/components/LogoutButton";
+import { getSession } from "@/lib/auth";
 
 export const revalidate = 0;
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ secret?: string }>;
-}) {
-  const params = await searchParams;
-  const secret = params.secret;
-  if (!secret || secret !== process.env.BACKFILL_SECRET) {
-    notFound();
-  }
+export default async function AdminPage() {
+  const session = await getSession();
 
   let modelAccuracy: Awaited<ReturnType<typeof getAccuracyByModel>> = [];
   const chartModels: Array<{
@@ -46,13 +39,21 @@ export default async function AdminPage({
 
   return (
     <div className="min-h-screen bg-light-gray">
-      <header className="bg-charcoal text-white px-6 py-4">
-        <h1 className="font-teko text-3xl font-bold tracking-wide">
-          Model A/B Testing
-        </h1>
-        <p className="text-sm text-white/60 mt-1">
-          Compare prediction models, track accuracy, and manage backfills
-        </p>
+      <header className="bg-charcoal text-white px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="font-teko text-3xl font-bold tracking-wide">
+            Model A/B Testing
+          </h1>
+          <p className="text-sm text-white/60 mt-1">
+            Compare prediction models, track accuracy, and manage backfills
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {session && (
+            <span className="text-xs text-white/50">{session.email}</span>
+          )}
+          <LogoutButton />
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
@@ -148,7 +149,7 @@ export default async function AdminPage({
             Run both models against completed games and compare predictions in real time.
             No backfill needed — results are computed on the fly.
           </p>
-          <ModelComparison secret={secret} modelIds={modelIds} />
+          <ModelComparison modelIds={modelIds} />
         </section>
 
         {/* Section 3: Backfill */}
@@ -160,7 +161,7 @@ export default async function AdminPage({
             Generate historical predictions for a model version. Stores results in the
             database for long-term accuracy tracking. Processes most recent dates first.
           </p>
-          <BackfillControls secret={secret} modelIds={modelIds} />
+          <BackfillControls modelIds={modelIds} />
         </section>
 
         {/* Section 4: Model Registry (collapsible) */}

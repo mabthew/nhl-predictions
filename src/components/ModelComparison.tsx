@@ -52,10 +52,8 @@ function formatDateLabel(dateStr: string) {
 }
 
 export default function ModelComparison({
-  secret,
   modelIds: availableModels,
 }: {
-  secret: string;
   modelIds: string[];
 }) {
   const [startDate, setStartDate] = useState(getDateNDaysAgo(7));
@@ -75,7 +73,7 @@ export default function ModelComparison({
       const models = modelA === modelB ? modelA : `${modelA},${modelB}`;
       const skipOdds = includeOdds ? "false" : "true";
       const res = await fetch(
-        `/api/admin/compare?secret=${secret}&startDate=${startDate}&endDate=${endDate}&models=${models}&skipOdds=${skipOdds}`
+        `/api/admin/compare?startDate=${startDate}&endDate=${endDate}&models=${models}&skipOdds=${skipOdds}`
       );
       if (!res.ok) {
         const body = await res.json();

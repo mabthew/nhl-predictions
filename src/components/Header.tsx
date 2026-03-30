@@ -77,6 +77,12 @@ export default function Header() {
           >
             Methodology
           </Link>
+          <Link
+            href="/login"
+            className="text-xs font-semibold uppercase tracking-wider text-white/30 hover:text-white/60 transition-colors"
+          >
+            Admin
+          </Link>
         </nav>
 
         {/* Mobile: hamburger button */}
@@ -125,6 +131,13 @@ export default function Header() {
             className="text-sm font-semibold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 px-4 py-2 rounded-lg transition-colors"
           >
             Methodology
+          </Link>
+          <Link
+            href="/login"
+            onClick={() => setMenuOpen(false)}
+            className="text-sm font-semibold uppercase tracking-wider text-white/30 hover:text-white/60 hover:bg-white/5 px-4 py-2 rounded-lg transition-colors"
+          >
+            Admin
           </Link>
         </nav>
       </div>

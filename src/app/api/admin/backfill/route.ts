@@ -5,11 +5,6 @@ import { getModelConfig, MODEL_REGISTRY } from "@/lib/model-configs";
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get("secret");
-  if (secret !== process.env.BACKFILL_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
     const body = await request.json();
     const modelId = body.modelId as string;

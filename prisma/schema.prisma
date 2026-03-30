@@ -42,3 +42,11 @@ model PredictionRecord {
   @@index([gameDate])
   @@index([modelVersion])
 }
+
+model AdminTotp {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  secret    String
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

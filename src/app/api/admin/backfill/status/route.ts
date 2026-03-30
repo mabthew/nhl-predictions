@@ -14,11 +14,6 @@ function getDateRange(start: string, end: string): string[] {
 }
 
 export async function GET(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get("secret");
-  if (secret !== process.env.BACKFILL_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const totalDates = getDateRange(SEASON_START, yesterday.toISOString().split("T")[0]).length;
