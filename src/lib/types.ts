@@ -188,8 +188,13 @@ export interface TeamMetrics {
   startingGoalieSavePct?: number;
   startingGoalieGAA?: number;
   startingGoalieName?: string;
+  startingGoalieConfirmation?: "Confirmed" | "Likely" | "Unconfirmed" | "Unknown";
+  startingGoalieDFRating?: number;  // DailyFaceoff 0-100 rating
   futuresImpliedProb?: number;  // Championship implied probability (0-100)
   starPower?: number;           // Star power score for confidence modifier
+  isBackToBack?: boolean;       // true if team played yesterday
+  restDays?: number;            // 0=B2B, 1=one day rest, 2+=well rested
+  playerMomentum?: number;      // aggregated last-5-game production score (0-100)
 }
 
 export interface PlayerPropPick {
@@ -269,6 +274,8 @@ export interface ModelWeights {
   futuresMarket: number;
   shotsAgainstPerGame: number;
   faceoffWinPct: number;
+  restFactor: number;
+  playerMomentum: number;
 }
 
 export interface ModelConfig {
@@ -279,6 +286,9 @@ export interface ModelConfig {
   homeIceBonus: number;
   enableStarPower: boolean;
   enableFutures: boolean;
+  enableStartingGoalies: boolean;
+  enablePlayerMomentum: boolean;
+  enableRestFactor: boolean;
   confidenceMultiplier: number;
 }
 

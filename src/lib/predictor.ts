@@ -11,9 +11,9 @@ import {
   OddsResponse,
   PlayerProfile,
 } from "./types";
-import { TeamLineCombos } from "./daily-faceoff";
+import { TeamLineCombos, StartingGoalieInfo, calculatePlayerMomentum } from "./daily-faceoff";
 import { DEFAULT_MODEL } from "./model-configs";
-import { buildTeamMetrics } from "./nhl-api";
+import { buildTeamMetrics, RestInfo } from "./nhl-api";
 import {
   getConsensusTotal,
   findBestPlayerProp,
@@ -33,6 +33,8 @@ const LEAGUE_AVG = {
   irImpact: 85,
   goalieSavePct: 0.905,
   futuresImpliedProb: 3.1, // 1/32 teams = ~3.1% average
+  restDays: 1.5,           // average rest between games
+  playerMomentum: 50,      // neutral momentum (scale 0-100)
 };
 
 // Standard deviations for z-score normalization
@@ -47,6 +49,8 @@ const LEAGUE_SD = {
   irImpact: 15,
   goalieSavePct: 0.012,
   futuresImpliedProb: 4, // favorites ~15%, longshots ~0.5%
+  restDays: 0.8,
+  playerMomentum: 15,
 };
 
 // Confidence degradation for games further in the future
@@ -65,7 +69,9 @@ export function generatePredictions(
   futuresMap?: Map<string, number>,
   playerProfileMap?: Map<string, PlayerProfile | null>,
   lineCombosMap?: Map<string, TeamLineCombos | null>,
-  modelConfig?: ModelConfig
+  modelConfig?: ModelConfig,
+  startingGoalies?: Map<string, StartingGoalieInfo>,
+  restMap?: Map<string, RestInfo>,
 ): GamePrediction[] {
   const model = modelConfig ?? DEFAULT_MODEL;
   const teamMetricsMap = new Map<string, TeamMetrics>();
@@ -88,7 +94,22 @@ export function generatePredictions(
       const teamSummary = findTeamSummary(teamStatsMap, teamFullName);
 
       const lineCombos = lineCombosMap?.get(abbrev) ?? null;
-      const metrics = buildTeamMetrics(standing, clubStats, teamInjuries, teamSummary, lineCombos);
+      const goalieInfo = startingGoalies?.get(abbrev) ?? null;
+      const metrics = buildTeamMetrics(standing, clubStats, teamInjuries, teamSummary, lineCombos, goalieInfo);
+
+      // Rest factor (gated by model config)
+      if (model.enableRestFactor && restMap) {
+        const restInfo = restMap.get(abbrev);
+        if (restInfo) {
+          metrics.isBackToBack = restInfo.isBackToBack;
+          metrics.restDays = restInfo.restDays;
+        }
+      }
+
+      // Player momentum from last-5-game stats (gated by model config)
+      if (model.enablePlayerMomentum && lineCombos) {
+        metrics.playerMomentum = calculatePlayerMomentum(lineCombos);
+      }
 
       // Add futures implied probability (gated by model config)
       if (model.enableFutures && futuresMap) {
@@ -262,6 +283,28 @@ function calculateComposite(metrics: TeamMetrics, isHome: boolean, model: ModelC
     futuresScore = zScoreNormalize(metrics.futuresImpliedProb, LEAGUE_AVG.futuresImpliedProb, LEAGUE_SD.futuresImpliedProb);
   }
 
+  // Rest factor (only if model enables it)
+  let restScore = 50;
+  if (model.enableRestFactor && metrics.restDays !== undefined) {
+    restScore = zScoreNormalize(metrics.restDays, LEAGUE_AVG.restDays, LEAGUE_SD.restDays);
+  }
+
+  // Player momentum (only if model enables it)
+  let momentumScore = 50;
+  if (model.enablePlayerMomentum && metrics.playerMomentum !== undefined) {
+    momentumScore = zScoreNormalize(metrics.playerMomentum, LEAGUE_AVG.playerMomentum, LEAGUE_SD.playerMomentum);
+  }
+
+  // Goalie confidence modifier based on DailyFaceoff confirmation status
+  let effectiveGoalieScore = goalieScore;
+  if (model.enableStartingGoalies && metrics.startingGoalieConfirmation) {
+    const confirmationMult =
+      metrics.startingGoalieConfirmation === "Confirmed" ? 1.0 :
+      metrics.startingGoalieConfirmation === "Likely" ? 0.9 : 0.7;
+    // Dampen the goalie signal toward neutral (50) when confirmation is uncertain
+    effectiveGoalieScore = 50 + (goalieScore - 50) * confirmationMult;
+  }
+
   let composite =
     goalDiffScore * w.goalDiffPerGame +
     shotsForScore * w.shotsForPerGame +
@@ -271,8 +314,10 @@ function calculateComposite(metrics: TeamMetrics, isHome: boolean, model: ModelC
     pkScore * w.penaltyKillPct +
     formScore * w.recentForm +
     irScore * w.irImpact +
-    goalieScore * w.goalie +
-    futuresScore * w.futuresMarket;
+    effectiveGoalieScore * w.goalie +
+    futuresScore * w.futuresMarket +
+    restScore * w.restFactor +
+    momentumScore * w.playerMomentum;
 
   if (isHome) {
     composite += model.homeIceBonus;
@@ -444,6 +489,27 @@ function generateKeyFactors(
   if (w.goalDiffPerGame > l.goalDiffPerGame + 0.2) {
     factors.push(
       `${w.teamAbbrev} has a stronger goal differential (${w.goalDiffPerGame > 0 ? "+" : ""}${w.goalDiffPerGame.toFixed(2)}/game vs ${l.goalDiffPerGame > 0 ? "+" : ""}${l.goalDiffPerGame.toFixed(2)})`
+    );
+  }
+
+  // Back-to-back fatigue
+  if (l.isBackToBack && !w.isBackToBack) {
+    factors.push(
+      `${l.teamAbbrev} is on a back-to-back, while ${w.teamAbbrev} is rested`
+    );
+  }
+
+  // Confirmed starting goalie edge
+  if (w.startingGoalieConfirmation === "Confirmed" && w.startingGoalieSavePct && w.startingGoalieSavePct > 0.915) {
+    factors.push(
+      `Confirmed starter ${w.startingGoalieName ?? ""} (${(w.startingGoalieSavePct * 100).toFixed(1)}% save percentage) gives ${w.teamAbbrev} a goaltending edge`
+    );
+  }
+
+  // Player momentum
+  if (w.playerMomentum !== undefined && l.playerMomentum !== undefined && w.playerMomentum > l.playerMomentum + 15) {
+    factors.push(
+      `${w.teamAbbrev}'s top players are running hot over their last 5 games`
     );
   }
 

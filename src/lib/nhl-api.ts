@@ -12,7 +12,7 @@ import {
   PlayerSeasonStats,
   PlayerAward,
 } from "./types";
-import { TeamLineCombos } from "./daily-faceoff";
+import { TeamLineCombos, StartingGoalieInfo } from "./daily-faceoff";
 
 const NHL_API_BASE = "https://api-web.nhle.com/v1";
 const NHL_STATS_API_BASE = "https://api.nhle.com/stats/rest/en";
@@ -204,7 +204,8 @@ export function buildTeamMetrics(
   clubStats: NHLClubStats | null,
   injuries: { name: string; position: string; status: string }[],
   teamSummary: NHLTeamSummaryStats | null,
-  lineCombos?: TeamLineCombos | null
+  lineCombos?: TeamLineCombos | null,
+  goalieInfo?: StartingGoalieInfo | null,
 ): TeamMetrics {
   const gp = team.gamesPlayed || 1;
   const goalsFor = team.goalFor / gp;
@@ -245,11 +246,24 @@ export function buildTeamMetrics(
   // Top players
   const topPlayers = clubStats ? getTopPlayers(clubStats) : [];
 
-  // Starting goalie (most games started)
+  // Starting goalie: prefer DailyFaceoff confirmed starter, fall back to "most games started"
   let startingGoalieSavePct: number | undefined;
   let startingGoalieGAA: number | undefined;
   let startingGoalieName: string | undefined;
-  if (clubStats) {
+  let startingGoalieConfirmation: "Confirmed" | "Likely" | "Unconfirmed" | "Unknown" | undefined;
+  let startingGoalieDFRating: number | undefined;
+
+  if (goalieInfo && goalieInfo.name) {
+    // Use DailyFaceoff confirmed starter data
+    startingGoalieSavePct = goalieInfo.savePct ?? undefined;
+    startingGoalieGAA = goalieInfo.gaa ?? undefined;
+    startingGoalieName = goalieInfo.name;
+    startingGoalieConfirmation = goalieInfo.confirmationStatus;
+    startingGoalieDFRating = goalieInfo.dailyFaceoffRating ?? undefined;
+  }
+
+  // Fall back to NHL API "most games started" goalie if DailyFaceoff didn't provide data
+  if (!startingGoalieSavePct && clubStats) {
     const goalies = (clubStats as unknown as Record<string, unknown>).goalies as {
       playerId: number;
       firstName: { default: string };
@@ -262,7 +276,9 @@ export function buildTeamMetrics(
       const starter = [...goalies].sort((a, b) => b.gamesStarted - a.gamesStarted)[0];
       startingGoalieSavePct = starter.savePercentage;
       startingGoalieGAA = starter.goalsAgainstAverage;
-      startingGoalieName = `${starter.firstName.default[0]}. ${starter.lastName.default}`;
+      if (!startingGoalieName) {
+        startingGoalieName = `${starter.firstName.default[0]}. ${starter.lastName.default}`;
+      }
     }
   }
 
@@ -287,6 +303,8 @@ export function buildTeamMetrics(
     startingGoalieSavePct,
     startingGoalieGAA,
     startingGoalieName,
+    startingGoalieConfirmation,
+    startingGoalieDFRating,
   };
 }
 
@@ -544,4 +562,24 @@ export async function fetchPlayerProfile(playerId: number): Promise<PlayerProfil
     console.error(`Failed to fetch player profile ${playerId}:`, error);
     return null;
   }
+}
+
+export interface RestInfo {
+  isBackToBack: boolean;
+  restDays: number; // 0=B2B, 1=one day rest, 2+=well rested
+}
+
+/**
+ * Detect back-to-back situations for teams playing on a given date.
+ * Uses the previous day's schedule to check if a team played the day before.
+ */
+export function detectRestInfo(
+  previousDayTeams: Set<string>,
+  teamAbbrev: string
+): RestInfo {
+  const isB2B = previousDayTeams.has(teamAbbrev);
+  return {
+    isBackToBack: isB2B,
+    restDays: isB2B ? 0 : 1, // simplified: 0 for B2B, 1 otherwise (full rest analysis would need more schedule history)
+  };
 }

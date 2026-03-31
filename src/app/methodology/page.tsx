@@ -6,27 +6,29 @@ import FeedbackButton from "@/components/FeedbackButton";
 // --- Data ---
 
 const PRIMARY_FACTORS = [
-  { pct: 20, label: "Goal Differential", desc: "Net goals scored minus goals allowed, per game. This is the single best predictor of team quality in hockey. Teams that consistently outscore opponents tend to keep doing it.", bold: "single best predictor", icon: "goal-diff" },
-  { pct: 14, label: "Shots Per Game", desc: "Average shots on goal generated per game. More shots on net means more scoring chances and sustained offensive zone pressure.", bold: "more scoring chances", icon: "shots-for" },
-  { pct: 12, label: "Current Streak", desc: "Point percentage over the last 10 games. This captures hot streaks, cold stretches, and recent lineup changes that season-long numbers can miss.", bold: "hot streaks, cold stretches", icon: "streak" },
+  { pct: 18, label: "Goal Differential", desc: "Net goals scored minus goals allowed, per game. This is the single best predictor of team quality in hockey. Teams that consistently outscore opponents tend to keep doing it.", bold: "single best predictor", icon: "goal-diff" },
+  { pct: 12, label: "Shots Per Game", desc: "Average shots on goal generated per game. More shots on net means more scoring chances and sustained offensive zone pressure.", bold: "more scoring chances", icon: "shots-for" },
+  { pct: 12, label: "Goalie Quality", desc: "Confirmed starting goalie save percentage, sourced from Daily Faceoff. Goaltending has the largest single-game impact of any position in hockey. We use the actual confirmed starter, not just the team's primary goalie, and weight the signal by confirmation status.", bold: "largest single-game impact", icon: "goalie" },
 ];
 
 const SUPPORTING_FACTORS = [
-  { pct: 12, label: "Penalty Kill", desc: "How well a team defends when short-handed. A strong penalty kill prevents easy goals and is one of the most consistent team skills from game to game.", bold: "most consistent team skills", icon: "penalty-kill" },
-  { pct: 10, label: "Power Play", desc: "Conversion rate on power play opportunities. It matters, but carries high variance from night to night. The best teams convert 25 to 30 percent, league average sits around 21.", bold: "high variance", icon: "lightning" },
-  { pct: 10, label: "Goalie Quality", desc: "Starting goalie save percentage. Goaltending has the largest single-game impact of any position in hockey. One strong performance can steal a game.", bold: "largest single-game impact", icon: "goalie" },
-  { pct: 10, label: "Roster Health", desc: "Injury impact weighted by player importance using line combinations from Daily Faceoff. Losing a first-line center is far more damaging than a fourth-line winger. Falls back to points-per-game estimates when line data is unavailable.", bold: "Daily Faceoff", icon: "health" },
+  { pct: 11, label: "Penalty Kill", desc: "How well a team defends when short-handed. A strong penalty kill prevents easy goals and is one of the most consistent team skills from game to game.", bold: "most consistent team skills", icon: "penalty-kill" },
+  { pct: 9, label: "Power Play", desc: "Conversion rate on power play opportunities. It matters, but carries high variance from night to night. The best teams convert 25 to 30 percent, league average sits around 21.", bold: "high variance", icon: "lightning" },
+  { pct: 9, label: "Roster Health", desc: "Injury impact weighted by player importance using line combinations from Daily Faceoff. Losing a first-line center is far more damaging than a fourth-line winger. Falls back to points-per-game estimates when line data is unavailable.", bold: "Daily Faceoff", icon: "health" },
+  { pct: 8, label: "Player Momentum", desc: "Per-player last-5-game production compared to their season average, weighted by line position. A first line running hot matters more than a fourth line. Captures individual streaks that team-level win/loss records miss entirely.", bold: "individual streaks", icon: "streak" },
 ];
 
 const MINOR_FACTORS = [
+  { pct: 5, label: "Team Form", desc: "Point percentage over the last 10 games. Captures coaching adjustments, system changes, and team-level dynamics that individual player stats can miss. Works alongside Player Momentum for a complete picture of recent performance.", bold: "coaching adjustments", icon: "streak" },
+  { pct: 5, label: "Schedule Fatigue", desc: "Teams playing on back-to-back nights historically win about 3 to 5 percent less often. We penalize back-to-back teams and boost well-rested teams facing a fatigued opponent. Derived from the NHL schedule data.", bold: "3 to 5 percent less often", icon: "arena" },
   { pct: 5, label: "Futures Market", desc: "Stanley Cup championship odds represent the betting market's aggregate view of team quality. Contenders get a boost, rebuilding teams get a penalty. Sourced from DraftKings via The Odds API.", bold: "aggregate view of team quality", icon: "futures" },
-  { pct: 5, label: "Shots Against Per Game", desc: "Average shots allowed per game. Fewer shots against generally indicates better defensive structure and more puck possession.", bold: "better defensive structure", icon: "shots-against" },
+  { pct: 4, label: "Shots Against Per Game", desc: "Average shots allowed per game. Fewer shots against generally indicates better defensive structure and more puck possession.", bold: "better defensive structure", icon: "shots-against" },
   { pct: 2, label: "Faceoff Win Rate", desc: "Team faceoff win percentage. Despite its reputation, the research shows faceoff rate has a very weak correlation with winning games. We weight it accordingly.", bold: "very weak correlation", icon: "faceoff" },
 ];
 
 const PIPELINE = [
-  { label: "Data Collection", sub: "NHL API, odds, injuries, lines", icon: "data" },
-  { label: "Factor Scoring", sub: "10 weighted metrics", icon: "scoring" },
+  { label: "Data Collection", sub: "NHL API, odds, injuries, goalies, lines", icon: "data" },
+  { label: "Factor Scoring", sub: "12 weighted metrics", icon: "scoring" },
   { label: "Composite Score", sub: "Weighted sum + bonus", icon: "composite" },
   { label: "Confidence", sub: "50 to 95% rating", icon: "gauge" },
   { label: "Final Pick", sub: "Higher composite wins", icon: "pick" },
@@ -136,8 +138,8 @@ export default function MethodologyPage() {
           How Predictions Work
         </h1>
         <p className="text-sm text-medium-gray mb-4">
-          Every prediction is built from <strong className="font-semibold text-charcoal">ten weighted factors</strong> pulled from
-          the NHL Stats API, betting markets, and line combination data.
+          Every prediction is built from <strong className="font-semibold text-charcoal">twelve weighted factors</strong> pulled from
+          the NHL Stats API, betting markets, confirmed starting goalies, and line combination data from Daily Faceoff.
         </p>
         <p className="text-sm text-medium-gray mb-8">
           Each factor is scored and combined into a <strong className="font-semibold text-charcoal">composite score</strong> from 0 to 100 for each team.
@@ -284,8 +286,8 @@ export default function MethodologyPage() {
               <h3 className="text-sm font-bold text-charcoal flex-1">Line Combinations</h3>
             </div>
             <p className="text-xs text-medium-gray leading-relaxed">
-              Projected line combinations from <strong className="font-semibold text-charcoal">Daily Faceoff</strong> help us weight injury impact more accurately.
-              Losing a first-line center carries a 20-point penalty, while a fourth-line winger costs only 3. When line data is unavailable, we fall back to points-per-game estimates.
+              Projected line combinations from <strong className="font-semibold text-charcoal">Daily Faceoff</strong> serve double duty: they weight injury impact by line position (first-line players cost more than fourth-liners),
+              and they power the Player Momentum factor by providing per-player last-5-game and last-10-game statistics. When line data is unavailable, we fall back to points-per-game estimates.
             </p>
           </div>
         </div>

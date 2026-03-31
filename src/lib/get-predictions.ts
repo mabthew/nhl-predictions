@@ -1,9 +1,9 @@
 import { NHLClubStats, NHLGame, NHLTeamSummaryStats, PredictionsResponse, ForecastTier, GameStatus, LiveGameScore, FuturesOdds, PlayerProfile } from "./types";
-import { fetchUpcomingGames, fetchStandings, fetchClubStats, fetchTeamStats, fetchLiveScores, fetchPlayerProfile } from "./nhl-api";
+import { fetchUpcomingGames, fetchStandings, fetchClubStats, fetchTeamStats, fetchLiveScores, fetchPlayerProfile, fetchSchedule, detectRestInfo, RestInfo } from "./nhl-api";
 import { fetchGameOdds, fetchPlayerProps, fetchStanleyCupFutures } from "./odds-api";
 import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
-import { fetchLineCombos, TeamLineCombos } from "./daily-faceoff";
+import { fetchLineCombos, fetchStartingGoalies, TeamLineCombos, StartingGoalieInfo } from "./daily-faceoff";
 
 function getForecastTier(dayIndex: number): ForecastTier {
   if (dayIndex <= 1) return "full";
@@ -13,7 +13,7 @@ function getForecastTier(dayIndex: number): ForecastTier {
 
 export async function getPredictions(): Promise<PredictionsResponse | null> {
   try {
-    const [upcomingDays, standings, injuries, odds, playerProps, teamStatsMap, liveScores, futures] =
+    const [upcomingDays, standings, injuries, odds, playerProps, teamStatsMap, liveScores, futures, startingGoalies] =
       await Promise.all([
         fetchUpcomingGames(),
         fetchStandings(),
@@ -23,6 +23,7 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
         fetchTeamStats(),
         fetchLiveScores(),
         fetchStanleyCupFutures(),
+        fetchStartingGoalies(),
       ]);
 
     // Show the full week of upcoming games (up to 7 days)
@@ -49,6 +50,41 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
     for (const game of finalGames) {
       teamAbbrevs.add(game.homeTeam.abbrev);
       teamAbbrevs.add(game.awayTeam.abbrev);
+    }
+
+    // Detect back-to-backs: fetch previous day's schedule to know who played yesterday
+    const restMap = new Map<string, RestInfo>();
+    const todayDate = upcomingDays[0]?.date;
+    if (todayDate) {
+      const prevDate = new Date(todayDate + "T12:00:00Z");
+      prevDate.setDate(prevDate.getDate() - 1);
+      const prevDateStr = prevDate.toISOString().split("T")[0];
+
+      // Check if previous day is already in our schedule data
+      const prevDayInData = upcomingDays.find((d) => d.date === prevDateStr);
+      const prevTeams = new Set<string>();
+
+      if (prevDayInData) {
+        for (const g of prevDayInData.games) {
+          prevTeams.add(g.homeTeam.abbrev);
+          prevTeams.add(g.awayTeam.abbrev);
+        }
+      } else {
+        // Fetch previous day's schedule (single small API call)
+        try {
+          const prevGames = await fetchSchedule(prevDateStr);
+          for (const g of prevGames) {
+            prevTeams.add(g.homeTeam.abbrev);
+            prevTeams.add(g.awayTeam.abbrev);
+          }
+        } catch {
+          // If fetch fails, we just won't have B2B data — model degrades gracefully
+        }
+      }
+
+      for (const abbrev of teamAbbrevs) {
+        restMap.set(abbrev, detectRestInfo(prevTeams, abbrev));
+      }
     }
 
     const [clubStatsEntries, lineComboEntries] = await Promise.all([
@@ -97,7 +133,10 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
       gameDayIndex,
       futuresMap,
       playerProfileMap,
-      lineCombosMap
+      lineCombosMap,
+      undefined, // modelConfig — uses default (v3)
+      startingGoalies,
+      restMap,
     );
 
     // Enrich each prediction with forecast tier, data availability, and live status
