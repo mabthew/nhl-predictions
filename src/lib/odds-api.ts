@@ -22,12 +22,12 @@ function getActiveKey(): string | null {
   return null;
 }
 
-async function oddsApiFetch(url: string): Promise<Response | null> {
+async function oddsApiFetch(url: string, cacheDuration = 900): Promise<Response | null> {
   let key = getActiveKey();
   if (!key) return null;
 
   const res = await fetch(url.replace("__API_KEY__", key), {
-    next: { revalidate: 180 },
+    next: { revalidate: cacheDuration },
   });
 
   // Check if free key is exhausted
@@ -43,7 +43,7 @@ async function oddsApiFetch(url: string): Promise<Response | null> {
       freeKeyExhausted = true;
       console.log("Free Odds API key failed, switching to paid key");
       const retryRes = await fetch(url.replace("__API_KEY__", paid), {
-        next: { revalidate: 180 },
+        next: { revalidate: cacheDuration },
       });
       if (retryRes.ok) return retryRes;
     }
@@ -361,7 +361,8 @@ export async function fetchStanleyCupFutures(): Promise<FuturesOdds[]> {
 
   try {
     const res = await oddsApiFetch(
-      `${ODDS_API_BASE}/${FUTURES_SPORT}/odds?apiKey=__API_KEY__&regions=us&markets=outrights&oddsFormat=american`
+      `${ODDS_API_BASE}/${FUTURES_SPORT}/odds?apiKey=__API_KEY__&regions=us&markets=outrights&oddsFormat=american`,
+      86400 // 24 hours — futures barely change day-to-day
     );
     if (!res) return [];
 

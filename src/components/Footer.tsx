@@ -54,6 +54,9 @@ export default function Footer() {
             <div className="mt-2">
               <FeedbackButton dark label="Let us know" />
             </div>
+            <Link href="/login" className="block mt-4 text-white/25 hover:text-white/50 transition-colors">
+              Admin
+            </Link>
           </div>
         </div>
 

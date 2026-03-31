@@ -52,19 +52,30 @@ export default function ModelAccuracyChart({ models }: Props) {
       allDates = allDates.filter((d) => d >= cutoffStr);
     }
 
-    // Build merged data: each row has date + one winnerPct per model
+    // Build lookup per model
+    const lookups = models.map((m) => ({
+      id: m.modelId,
+      map: new Map(m.data.map((d) => [d.date, d.winnerPct])),
+    }));
+
+    // Fill in every date in range so lines break on no-game days
+    if (allDates.length === 0) return [];
+    const start = new Date(allDates[0] + "T12:00:00");
+    const end = new Date(allDates[allDates.length - 1] + "T12:00:00");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const dataMap = new Map<string, Record<string, any>>();
-    for (const m of models) {
-      const lookup = new Map(m.data.map((d) => [d.date, d.winnerPct]));
-      for (const date of allDates) {
-        const row = dataMap.get(date) ?? { date };
-        row[m.modelId] = lookup.get(date) ?? null;
-        dataMap.set(date, row);
+    const filled: Record<string, any>[] = [];
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split("T")[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const row: Record<string, any> = { date: dateStr };
+      for (const { id, map } of lookups) {
+        row[id] = map.get(dateStr) ?? null;
       }
+      filled.push(row);
     }
 
-    return Array.from(dataMap.values());
+    return filled;
   }, [models, range]);
 
   if (models.length === 0 || merged.length < 2) {

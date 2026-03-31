@@ -201,15 +201,18 @@ export default function ModelComparison({
         >
           {loading ? "Running..." : "Compare"}
         </button>
-        <label className="flex items-center gap-2 pb-2 cursor-pointer">
+        <label className="flex items-center gap-2 pb-2 cursor-pointer group/odds relative">
           <input
             type="checkbox"
             checked={includeOdds}
             onChange={(e) => setIncludeOdds(e.target.checked)}
             className="rounded border-border-gray"
           />
-          <span className="text-xs text-medium-gray" title="Fetches live betting odds from the Odds API (2 calls per request). Off by default to save quota. Only needed if your model uses odds data differently between versions — odds don't affect winner predictions for v1/v2.">
+          <span className="text-xs text-medium-gray">
             Include Odds <span className="text-[10px]">(uses API quota)</span>
+          </span>
+          <span className="invisible group-hover/odds:visible absolute left-0 top-full mt-1 z-10 bg-charcoal text-white text-[11px] px-3 py-2 rounded-lg shadow-lg max-w-64 leading-relaxed">
+            Fetches live odds from the Odds API (2 calls per request). V2 and V3 use odds as 5% of composite score. V1 does not use odds.
           </span>
         </label>
       </div>

@@ -18,7 +18,7 @@ import { TeamMetrics } from "@/lib/types";
 import { TEAM_COLORS } from "@/lib/team-colors";
 import CollapsibleFactors from "@/components/CollapsibleFactors";
 
-export const revalidate = 180;
+export const revalidate = 900;
 
 export default async function GameDetailPage({
   params,

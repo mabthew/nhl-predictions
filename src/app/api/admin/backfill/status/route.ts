@@ -14,9 +14,8 @@ function getDateRange(start: string, end: string): string[] {
 }
 
 export async function GET(request: NextRequest) {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const totalDates = getDateRange(SEASON_START, yesterday.toISOString().split("T")[0]).length;
+  const today = new Date().toISOString().split("T")[0];
+  const totalDates = getDateRange(SEASON_START, today).length;
 
   // Count ALL synced dates per model (including sentinels — dates with no games)
   // This matches how syncHistoryBatch determines "already synced"

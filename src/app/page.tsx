@@ -7,7 +7,7 @@ import FuturesTable from "@/components/FuturesTable";
 import { getPredictions } from "@/lib/get-predictions";
 import { fetchStanleyCupFutures } from "@/lib/odds-api";
 
-export const revalidate = 180;
+export const revalidate = 900;
 
 export default async function Home() {
   const [data, futures] = await Promise.all([
