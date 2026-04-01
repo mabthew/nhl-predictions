@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { GamePrediction } from "@/lib/types";
-import { formatGameTime, formatDate } from "@/lib/utils";
+import { formatGameTime, formatDate, formatOdds } from "@/lib/utils";
 import { TEAM_COLORS } from "@/lib/team-colors";
 import MetricBar from "./MetricBar";
 import OverUnder from "./OverUnder";
@@ -106,18 +106,53 @@ export default function GameCard({ prediction }: GameCardProps) {
 
         {/* Pick zone — visually distinct */}
         <div className={`mx-4 mb-3 rounded-lg px-4 py-3.5 ${isLive ? "bg-light-gray/50 border border-border-gray" : "bg-light-gray/70"}`}>
-          <div className="flex flex-col items-center mb-2">
-            <span className="text-[11px] uppercase tracking-widest text-medium-gray font-bold">
-              {isLive ? "Pre-Game Pick" : "Our Pick"}
-            </span>
-            <span className="font-teko text-3xl font-bold leading-none text-charcoal">
-              {winnerAbbrev}
-            </span>
-          </div>
-          <div className="h-2.5 bg-white rounded-full overflow-hidden">
-            <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${winnerConfidence}%` }} />
-          </div>
-          <p className="text-center text-xs font-bold text-green-600 mt-1.5">{winnerConfidence}% confidence</p>
+          {/* Puck Line — primary pick */}
+          {prediction.puckLine ? (
+            <>
+              <div className="flex items-center justify-center gap-6 mb-2">
+                <div className="text-center">
+                  <span className="font-teko text-xl font-bold leading-none" style={{ color: TEAM_COLORS[awayTeam.teamAbbrev] ?? "#232525" }}>
+                    {prediction.puckLine.awaySpread > 0 ? "+" : ""}{prediction.puckLine.awaySpread}
+                  </span>
+                  <span className="text-xs font-bold text-charcoal ml-1">({formatOdds(prediction.puckLine.awayOdds)})</span>
+                </div>
+                <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">
+                  {isLive ? "Pre-Game PL" : "Puck Line"}
+                </span>
+                <div className="text-center">
+                  <span className="font-teko text-xl font-bold leading-none" style={{ color: TEAM_COLORS[homeTeam.teamAbbrev] ?? "#232525" }}>
+                    {prediction.puckLine.homeSpread > 0 ? "+" : ""}{prediction.puckLine.homeSpread}
+                  </span>
+                  <span className="text-xs font-bold text-charcoal ml-1">({formatOdds(prediction.puckLine.homeOdds)})</span>
+                </div>
+              </div>
+              {/* Winner pick */}
+              <div className="pt-2 mt-2 border-t border-border-gray/40 flex items-center justify-center gap-2">
+                <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Favorite</span>
+                <span className="text-xs font-bold text-charcoal">{winnerAbbrev}</span>
+                <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
+                  <div className="h-full bg-green-500 rounded-full" style={{ width: `${winnerConfidence}%` }} />
+                </div>
+                <span className="text-[11px] font-bold text-green-600">{winnerConfidence}%</span>
+              </div>
+            </>
+          ) : (
+            /* Fallback when no puck line data */
+            <>
+              <div className="flex flex-col items-center mb-2">
+                <span className="text-[11px] uppercase tracking-widest text-medium-gray font-bold">
+                  {isLive ? "Pre-Game Pick" : "Our Pick"}
+                </span>
+                <span className="font-teko text-3xl font-bold leading-none text-charcoal">
+                  {winnerAbbrev}
+                </span>
+              </div>
+              <div className="h-2.5 bg-white rounded-full overflow-hidden">
+                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${winnerConfidence}%` }} />
+              </div>
+              <p className="text-center text-xs font-bold text-green-600 mt-1.5">{winnerConfidence}% confidence</p>
+            </>
+          )}
         </div>
 
       </Link>

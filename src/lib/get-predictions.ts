@@ -1,6 +1,6 @@
 import { NHLClubStats, NHLGame, NHLTeamSummaryStats, PredictionsResponse, ForecastTier, GameStatus, LiveGameScore, FuturesOdds, PlayerProfile } from "./types";
 import { fetchUpcomingGames, fetchStandings, fetchClubStats, fetchTeamStats, fetchLiveScores, fetchPlayerProfile, fetchSchedule, detectRestInfo, RestInfo } from "./nhl-api";
-import { fetchGameOdds, fetchPlayerProps, fetchStanleyCupFutures } from "./odds-api";
+import { loadOddsFromCache } from "./odds-cache";
 import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
 import { fetchLineCombos, fetchStartingGoalies, TeamLineCombos, StartingGoalieInfo } from "./daily-faceoff";
@@ -13,18 +13,18 @@ function getForecastTier(dayIndex: number): ForecastTier {
 
 export async function getPredictions(): Promise<PredictionsResponse | null> {
   try {
-    const [upcomingDays, standings, injuries, odds, playerProps, teamStatsMap, liveScores, futures, startingGoalies] =
+    const [upcomingDays, standings, injuries, oddsCache, teamStatsMap, liveScores, startingGoalies] =
       await Promise.all([
         fetchUpcomingGames(),
         fetchStandings(),
         fetchInjuries(),
-        fetchGameOdds(),
-        fetchPlayerProps(),
+        loadOddsFromCache(),
         fetchTeamStats(),
         fetchLiveScores(),
-        fetchStanleyCupFutures(),
         fetchStartingGoalies(),
       ]);
+
+    const { gameOdds: odds, playerProps, futures } = oddsCache;
 
     // Show the full week of upcoming games (up to 7 days)
     const finalGames: NHLGame[] = upcomingDays.flatMap((d) => d.games);
@@ -43,6 +43,7 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
         date: finalDate,
         generatedAt: new Date().toISOString(),
         predictions: [],
+        futures,
       };
     }
 
@@ -171,6 +172,7 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
       date: finalDate,
       generatedAt: new Date().toISOString(),
       predictions,
+      futures,
     };
   } catch (error) {
     console.error("Failed to load predictions:", error);

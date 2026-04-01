@@ -13,7 +13,7 @@ import LineCombos from "@/components/LineCombos";
 import { getPredictions } from "@/lib/get-predictions";
 import { fetchBoxScore, fetchPlayerProfile } from "@/lib/nhl-api";
 import { fetchLineCombos } from "@/lib/daily-faceoff";
-import { formatGameTime, formatDate } from "@/lib/utils";
+import { formatGameTime, formatDate, formatOdds } from "@/lib/utils";
 import { TeamMetrics } from "@/lib/types";
 import { TEAM_COLORS } from "@/lib/team-colors";
 import CollapsibleFactors from "@/components/CollapsibleFactors";
@@ -139,19 +139,52 @@ export default async function GameDetailPage({
               )}
             </div>
 
-            {/* Center — pick + confidence */}
-            <div className="flex flex-col items-center justify-center px-2 sm:px-10 sm:min-w-[200px] py-2 sm:py-0 border-y sm:border-y-0 border-border-gray/50">
+            {/* Center — puck line (primary) + winner pick (secondary) */}
+            <div className="flex flex-col items-center justify-center px-2 sm:px-10 sm:min-w-[220px] py-2 sm:py-0 border-y sm:border-y-0 border-border-gray/50">
               {game.gameStatus === "live" && (
                 <span className="text-[10px] font-bold uppercase tracking-widest text-espn-red mb-1">Pre-Game Analysis</span>
               )}
-              <p className="font-teko text-2xl sm:text-3xl leading-none">
-                <span className="text-medium-gray font-bold">Pick: </span>
-                <span className="font-bold" style={{ color: TEAM_COLORS[winner.teamAbbrev] ?? "#232525" }}>{winner.teamAbbrev}</span>
-              </p>
-              <p className="text-base sm:text-lg text-medium-gray font-semibold mt-1">{winnerConfidence}% confidence</p>
-              <div className="w-full max-w-[200px] mt-2 h-3 bg-border-gray rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full" style={{ width: `${winnerConfidence}%` }} />
-              </div>
+              {game.puckLine ? (
+                <>
+                  <p className="text-[10px] uppercase tracking-widest text-medium-gray font-bold mb-2">Puck Line</p>
+                  <div className="flex gap-6 items-center">
+                    <div className="text-center">
+                      <p className="font-teko text-2xl sm:text-3xl font-bold leading-none" style={{ color: TEAM_COLORS[awayTeam.teamAbbrev] ?? "#232525" }}>
+                        {awayTeam.teamAbbrev} {game.puckLine.awaySpread > 0 ? "+" : ""}{game.puckLine.awaySpread}
+                      </p>
+                      <p className="text-sm font-bold text-charcoal mt-0.5">{formatOdds(game.puckLine.awayOdds)}</p>
+                    </div>
+                    <span className="text-xs text-medium-gray/40 font-bold">vs</span>
+                    <div className="text-center">
+                      <p className="font-teko text-2xl sm:text-3xl font-bold leading-none" style={{ color: TEAM_COLORS[homeTeam.teamAbbrev] ?? "#232525" }}>
+                        {homeTeam.teamAbbrev} {game.puckLine.homeSpread > 0 ? "+" : ""}{game.puckLine.homeSpread}
+                      </p>
+                      <p className="text-sm font-bold text-charcoal mt-0.5">{formatOdds(game.puckLine.homeOdds)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border-gray/40 w-full max-w-[240px] flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Winner</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold" style={{ color: TEAM_COLORS[winner.teamAbbrev] ?? "#232525" }}>{winner.teamAbbrev}</span>
+                      <div className="w-16 h-2 bg-border-gray rounded-full overflow-hidden">
+                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${winnerConfidence}%` }} />
+                      </div>
+                      <span className="text-xs font-bold text-green-600">{winnerConfidence}%</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="font-teko text-2xl sm:text-3xl leading-none">
+                    <span className="text-medium-gray font-bold">Pick: </span>
+                    <span className="font-bold" style={{ color: TEAM_COLORS[winner.teamAbbrev] ?? "#232525" }}>{winner.teamAbbrev}</span>
+                  </p>
+                  <p className="text-base sm:text-lg text-medium-gray font-semibold mt-1">{winnerConfidence}% confidence</p>
+                  <div className="w-full max-w-[200px] mt-2 h-3 bg-border-gray rounded-full overflow-hidden">
+                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${winnerConfidence}%` }} />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Home column */}
@@ -286,6 +319,34 @@ export default async function GameDetailPage({
             <section className="bg-white rounded-xl border border-border-gray shadow-sm p-6">
               <CollapsibleFactors factors={game.keyFactors} />
             </section>
+
+            {/* Puck Line */}
+            {game.puckLine && (
+              <section className="bg-white rounded-xl border-l-4 border-green-500 shadow-sm p-6">
+                <h2 className="font-teko text-lg font-bold uppercase tracking-tight text-charcoal mb-3">
+                  Puck Line (Spread)
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-light-gray">
+                    <span className="font-semibold text-sm text-charcoal">{awayTeam.teamAbbrev}</span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-charcoal">{game.puckLine.awaySpread > 0 ? "+" : ""}{game.puckLine.awaySpread}</span>
+                      <span className="text-sm text-medium-gray ml-2">({formatOdds(game.puckLine.awayOdds)})</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-light-gray">
+                    <span className="font-semibold text-sm text-charcoal">{homeTeam.teamAbbrev}</span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-charcoal">{game.puckLine.homeSpread > 0 ? "+" : ""}{game.puckLine.homeSpread}</span>
+                      <span className="text-sm text-medium-gray ml-2">({formatOdds(game.puckLine.homeOdds)})</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-[11px] text-medium-gray mt-3">
+                  The puck line is always -1.5/+1.5. The favorite must win by 2 or more goals to cover.
+                </p>
+              </section>
+            )}
 
             {/* Over/Under */}
             <section className="bg-white rounded-xl border border-border-gray shadow-sm p-6">

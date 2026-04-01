@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchSchedule, fetchStandings, fetchClubStats, fetchTeamStats } from "@/lib/nhl-api";
-import { fetchGameOdds, fetchPlayerProps } from "@/lib/odds-api";
+import { loadOddsFromCache } from "@/lib/odds-cache";
 import { fetchInjuries } from "@/lib/injuries";
 import { generatePredictions } from "@/lib/predictor";
 import { getTomorrowDate, getTodayDate } from "@/lib/utils";
@@ -14,15 +14,15 @@ export async function GET(request: Request) {
   const targetDate = dateParam ?? getTomorrowDate();
 
   try {
-    // Fetch schedule + standings + injuries + odds in parallel
-    const [games, standings, injuries, odds, playerProps, teamStatsMap] = await Promise.all([
+    const [games, standings, injuries, oddsCache, teamStatsMap] = await Promise.all([
       fetchSchedule(targetDate),
       fetchStandings(),
       fetchInjuries(),
-      fetchGameOdds(),
-      fetchPlayerProps(),
+      loadOddsFromCache(),
       fetchTeamStats(),
     ]);
+
+    const { gameOdds: odds, playerProps } = oddsCache;
 
     // If no games for target date and no explicit date param, try today
     let finalGames = games;

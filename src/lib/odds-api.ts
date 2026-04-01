@@ -63,7 +63,7 @@ export async function fetchGameOdds(): Promise<OddsResponse[]> {
 
   try {
     const res = await oddsApiFetch(
-      `${ODDS_API_BASE}/${SPORT}/odds?apiKey=__API_KEY__&regions=us&markets=h2h,totals&oddsFormat=american`
+      `${ODDS_API_BASE}/${SPORT}/odds?apiKey=__API_KEY__&regions=us&markets=spreads,totals&oddsFormat=american`
     );
     if (!res) return [];
     return await res.json();
@@ -79,18 +79,28 @@ export async function fetchPlayerProps(): Promise<OddsResponse[]> {
 
   try {
     const eventsRes = await oddsApiFetch(
-      `${ODDS_API_BASE}/${SPORT}/events?apiKey=__API_KEY__`
+      `${ODDS_API_BASE}/${SPORT}/events?apiKey=__API_KEY__`,
+      3600
     );
     if (!eventsRes) return [];
 
-    const events: { id: string; home_team: string; away_team: string }[] =
+    const events: { id: string; home_team: string; away_team: string; commence_time: string }[] =
       await eventsRes.json();
 
+    // Only fetch props for games starting within the next 36 hours
+    const now = Date.now();
+    const cutoff = now + 36 * 60 * 60 * 1000;
+    const upcoming = events.filter((e) => {
+      const start = new Date(e.commence_time).getTime();
+      return start >= now - 4 * 60 * 60 * 1000 && start <= cutoff;
+    });
+
     const results: OddsResponse[] = [];
-    for (const event of events.slice(0, 10)) {
+    for (const event of upcoming.slice(0, 4)) {
       try {
         const res = await oddsApiFetch(
-          `${ODDS_API_BASE}/${SPORT}/events/${event.id}/odds?apiKey=__API_KEY__&regions=us&markets=player_goals,player_assists,player_shots_on_goal&oddsFormat=american`
+          `${ODDS_API_BASE}/${SPORT}/events/${event.id}/odds?apiKey=__API_KEY__&regions=us&markets=player_goals,player_assists,player_shots_on_goal&oddsFormat=american`,
+          3600
         );
         if (res) {
           const data = await res.json();
@@ -134,21 +144,24 @@ export function getConsensusTotal(
   return totals.reduce((a, b) => a + b, 0) / totals.length;
 }
 
-export function getMoneylineOdds(
+export function getPuckLineOdds(
   odds: OddsResponse[],
   homeTeam: string,
   awayTeam: string
-): { home: number; away: number } | null {
+): { home: { spread: number; price: number }; away: { spread: number; price: number } } | null {
   const game = findGameOdds(odds, homeTeam, awayTeam);
   if (!game) return null;
 
   for (const bookmaker of game.bookmakers) {
-    const h2h = bookmaker.markets.find((m) => m.key === "h2h");
-    if (h2h) {
-      const home = h2h.outcomes.find((o) => o.name === game.home_team);
-      const away = h2h.outcomes.find((o) => o.name === game.away_team);
-      if (home && away) {
-        return { home: home.price, away: away.price };
+    const spreads = bookmaker.markets.find((m) => m.key === "spreads");
+    if (spreads) {
+      const home = spreads.outcomes.find((o) => o.name === game.home_team);
+      const away = spreads.outcomes.find((o) => o.name === game.away_team);
+      if (home && away && home.point !== undefined && away.point !== undefined) {
+        return {
+          home: { spread: home.point, price: home.price },
+          away: { spread: away.point, price: away.price },
+        };
       }
     }
   }

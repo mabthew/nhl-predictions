@@ -236,6 +236,13 @@ export interface LiveGameScore {
   awaySog: number;
 }
 
+export interface PuckLine {
+  homeSpread: number;
+  homeOdds: number;
+  awaySpread: number;
+  awayOdds: number;
+}
+
 export interface GamePrediction {
   gameId: number;
   gameDate: string;
@@ -247,6 +254,7 @@ export interface GamePrediction {
   winnerConfidence: number;
   overUnder: OverUnderPrediction;
   playerProp: PlayerPropPick | null;
+  puckLine?: PuckLine;
   keyFactors: string[];
   dayIndex: number;
   forecastTier: ForecastTier;
@@ -259,6 +267,7 @@ export interface PredictionsResponse {
   date: string;
   generatedAt: string;
   predictions: GamePrediction[];
+  futures?: FuturesOdds[];
 }
 
 // ── Model Configuration Types ──

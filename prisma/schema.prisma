@@ -43,6 +43,14 @@ model PredictionRecord {
   @@index([modelVersion])
 }
 
+model OddsCache {
+  id          String   @id @default("latest")
+  gameOdds    String   @db.Text
+  playerProps String   @db.Text
+  futures     String   @db.Text
+  updatedAt   DateTime @updatedAt
+}
+
 model AdminTotp {
   id        Int      @id @default(autoincrement())
   email     String   @unique

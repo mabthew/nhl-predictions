@@ -5,15 +5,12 @@ import Ticker from "@/components/Ticker";
 import WeekView from "@/components/WeekView";
 import FuturesTable from "@/components/FuturesTable";
 import { getPredictions } from "@/lib/get-predictions";
-import { fetchStanleyCupFutures } from "@/lib/odds-api";
 
 export const revalidate = 900;
 
 export default async function Home() {
-  const [data, futures] = await Promise.all([
-    getPredictions(),
-    fetchStanleyCupFutures(),
-  ]);
+  const data = await getPredictions();
+  const futures = data?.futures ?? [];
 
   return (
     <>

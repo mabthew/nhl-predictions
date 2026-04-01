@@ -16,6 +16,7 @@ import { DEFAULT_MODEL } from "./model-configs";
 import { buildTeamMetrics, RestInfo } from "./nhl-api";
 import {
   getConsensusTotal,
+  getPuckLineOdds,
   findBestPlayerProp,
 } from "./odds-api";
 import { getTeamInjuries, TEAM_NAMES } from "./injuries";
@@ -195,6 +196,17 @@ export function generatePredictions(
 
     const playerProp = findBestPlayerProp(playerProps, homeName, awayName, clubStatsMap);
 
+    // Get puck line (spreads) data
+    const puckLineData = getPuckLineOdds(odds, homeName, awayName);
+    const puckLine = puckLineData
+      ? {
+          homeSpread: puckLineData.home.spread,
+          homeOdds: puckLineData.home.price,
+          awaySpread: puckLineData.away.spread,
+          awayOdds: puckLineData.away.price,
+        }
+      : undefined;
+
     const keyFactors = generateKeyFactors(
       homeMetrics,
       awayMetrics,
@@ -213,6 +225,7 @@ export function generatePredictions(
       winnerConfidence: Math.round(winnerConfidence),
       overUnder,
       playerProp,
+      puckLine,
       keyFactors,
       dayIndex: dayIdx,
       forecastTier: dayIdx <= 1 ? "full" : dayIdx <= 3 ? "early" : "preliminary",
