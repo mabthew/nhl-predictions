@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { OddsResponse, FuturesOdds } from "./types";
 
@@ -9,15 +10,15 @@ export async function saveOddsToCache(
   await prisma.oddsCache.upsert({
     where: { id: "latest" },
     update: {
-      gameOdds: JSON.stringify(gameOdds),
-      playerProps: JSON.stringify(playerProps),
-      futures: JSON.stringify(futures),
+      gameOdds: gameOdds as unknown as Prisma.InputJsonValue,
+      playerProps: playerProps as unknown as Prisma.InputJsonValue,
+      futures: futures as unknown as Prisma.InputJsonValue,
     },
     create: {
       id: "latest",
-      gameOdds: JSON.stringify(gameOdds),
-      playerProps: JSON.stringify(playerProps),
-      futures: JSON.stringify(futures),
+      gameOdds: gameOdds as unknown as Prisma.InputJsonValue,
+      playerProps: playerProps as unknown as Prisma.InputJsonValue,
+      futures: futures as unknown as Prisma.InputJsonValue,
     },
   });
 }
@@ -37,9 +38,9 @@ export async function loadOddsFromCache(): Promise<{
     }
 
     return {
-      gameOdds: JSON.parse(cached.gameOdds) as OddsResponse[],
-      playerProps: JSON.parse(cached.playerProps) as OddsResponse[],
-      futures: JSON.parse(cached.futures) as FuturesOdds[],
+      gameOdds: cached.gameOdds as unknown as OddsResponse[],
+      playerProps: cached.playerProps as unknown as OddsResponse[],
+      futures: cached.futures as unknown as FuturesOdds[],
     };
   } catch (error) {
     console.error("Failed to load odds from cache:", error);

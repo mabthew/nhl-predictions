@@ -45,9 +45,9 @@ model PredictionRecord {
 
 model OddsCache {
   id          String   @id @default("latest")
-  gameOdds    String   @db.Text
-  playerProps String   @db.Text
-  futures     String   @db.Text
+  gameOdds    Json
+  playerProps Json
+  futures     Json
   updatedAt   DateTime @updatedAt
 }
 

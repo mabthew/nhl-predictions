@@ -6,7 +6,7 @@ import { generatePredictions } from "@/lib/predictor";
 import { getTomorrowDate, getTodayDate } from "@/lib/utils";
 import { NHLClubStats, PredictionsResponse } from "@/lib/types";
 
-export const revalidate = 3600;
+export const revalidate = 900;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

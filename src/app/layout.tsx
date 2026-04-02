@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins, Teko } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -43,6 +45,8 @@ export default function RootLayout({
     <html lang="en" className={`${poppins.variable} ${teko.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-poppins">
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

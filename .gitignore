@@ -45,6 +45,3 @@ next-env.d.ts
 # sqlite database
 /data/
 .env*.local
-
-# roadmap
-roadmap.md

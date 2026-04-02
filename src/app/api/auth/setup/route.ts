@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminEmail, generateTotp, verifyTotp, createSession } from "@/lib/auth";
+import { isAdminEmail, generateTotp, verifyTotp, createSession, setSessionCookie, parseJsonBody } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 // Generate a new TOTP secret for an admin email
 export async function POST(request: NextRequest) {
-  const { email } = await request.json();
+  const body = await parseJsonBody<{ email: string }>(request);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const { email } = body;
 
   if (!email || !isAdminEmail(email)) {
     return NextResponse.json({ error: "Not authorized" }, { status: 401 });
@@ -37,7 +42,12 @@ export async function POST(request: NextRequest) {
 
 // Confirm TOTP setup with a valid code
 export async function PUT(request: NextRequest) {
-  const { email, code } = await request.json();
+  const body = await parseJsonBody<{ email: string; code: string }>(request);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const { email, code } = body;
 
   if (!email || !code || !isAdminEmail(email)) {
     return NextResponse.json({ error: "Not authorized" }, { status: 401 });
@@ -56,6 +66,7 @@ export async function PUT(request: NextRequest) {
   }
 
   if (!verifyTotp(record.secret, code)) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     return NextResponse.json({ error: "Invalid code. Try again." }, { status: 400 });
   }
 
@@ -66,13 +77,7 @@ export async function PUT(request: NextRequest) {
 
   const token = await createSession(normalizedEmail);
   const response = NextResponse.json({ ok: true });
-  response.cookies.set("admin-session", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  setSessionCookie(response, token);
 
   return response;
 }

@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import * as OTPAuth from "otpauth";
 
 const COOKIE_NAME = "admin-session";
@@ -66,4 +67,22 @@ export function verifyTotp(base32Secret: string, code: string): boolean {
   });
   const delta = totp.validate({ token: code, window: 1 });
   return delta !== null;
+}
+
+export function setSessionCookie(response: NextResponse, token: string): void {
+  response.cookies.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+    path: "/",
+  });
+}
+
+export async function parseJsonBody<T>(request: Request): Promise<T | null> {
+  try {
+    return await request.json() as T;
+  } catch {
+    return null;
+  }
 }

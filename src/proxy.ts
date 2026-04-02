@@ -6,7 +6,7 @@ const COOKIE_NAME = "admin-session";
 const PROTECTED_PAGES = ["/admin"];
 const PROTECTED_API = ["/api/admin", "/api/backfill"];
 
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isProtectedPage = PROTECTED_PAGES.some((p) => pathname.startsWith(p));

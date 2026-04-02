@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminEmail, createSession, verifyTotp } from "@/lib/auth";
+import { isAdminEmail, createSession, verifyTotp, setSessionCookie, parseJsonBody } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
-  const { email, code } = await request.json();
+  const body = await parseJsonBody<{ email: string; code: string }>(request);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const { email, code } = body;
 
   if (!email || !code) {
     return NextResponse.json(
@@ -28,18 +33,14 @@ export async function POST(request: NextRequest) {
   }
 
   if (!verifyTotp(record.secret, code)) {
+    // Delay response on failure to slow brute-force attempts
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     return NextResponse.json({ error: "Invalid code" }, { status: 401 });
   }
 
   const token = await createSession(email);
   const response = NextResponse.json({ ok: true });
-  response.cookies.set("admin-session", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7, // 7 days
-    path: "/",
-  });
+  setSessionCookie(response, token);
 
   return response;
 }
