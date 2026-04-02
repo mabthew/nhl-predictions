@@ -1,6 +1,5 @@
 ## Betting Features
 
-- **Puck line / moneyline toggle** - Let users switch between puck line and moneyline views on game cards
 - **Puck line confidence** - Show confidence scores for puck line picks, not just winner predictions
 - **Best bet of the day** - Surface the highest-confidence pick weighted by payout potential
 - **3-leg parlay builder** - Generate a recommended 3-leg parlay from the day's best picks

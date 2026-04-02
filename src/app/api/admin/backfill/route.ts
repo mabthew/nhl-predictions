@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
     const modelId = body.modelId as string;
     const batchSize = Math.min(Math.max(body.batchSize ?? 10, 1), 30);
     const includeOdds = body.includeOdds === true;
+    const force = body.force === true;
 
     const modelConfig = getModelConfig(modelId);
     if (!modelConfig) {
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
       skipOdds: !includeOdds,
       modelVersion: modelConfig.id,
       modelConfig,
+      force,
     });
 
     return NextResponse.json({

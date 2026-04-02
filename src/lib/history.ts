@@ -30,6 +30,7 @@ export interface SyncOptions {
   skipOdds?: boolean;
   modelVersion?: string;
   modelConfig?: import("./types").ModelConfig;
+  force?: boolean;
 }
 
 export interface SyncResult {
@@ -63,9 +64,10 @@ export async function syncHistoryBatch(
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
   const recentCutoff = threeDaysAgo.toISOString().split("T")[0];
 
-  const datesToSync = allDates.filter(
-    (d) => !syncedWithGames.has(d) || d >= recentCutoff
-  );
+  const force = options?.force ?? false;
+  const datesToSync = force
+    ? allDates
+    : allDates.filter((d) => !syncedWithGames.has(d) || d >= recentCutoff);
   if (datesToSync.length === 0)
     return { processed: 0, remaining: 0, dates: [] };
 
@@ -197,6 +199,10 @@ export async function syncHistoryBatch(
             awayScore,
             actualWinner,
             winnerCorrect: pred.predictedWinner === actualWinner,
+            winnerConfidence: pred.winnerConfidence,
+            ouLine: pred.overUnder.line,
+            ouPrediction: pred.overUnder.prediction,
+            ouProjectedTotal: pred.overUnder.projectedTotal,
             actualTotal,
             ouCorrect:
               (pred.overUnder.prediction === "OVER" &&
