@@ -4,6 +4,7 @@ import { z } from "zod";
 import { logApiCall } from "@/lib/api-usage";
 import { getSession } from "@/lib/auth";
 import { MODEL_REGISTRY } from "@/lib/model-configs";
+import { getFeedRegistry, estimateFeedCosts } from "@/lib/data-feeds";
 
 export const maxDuration = 60;
 
@@ -33,6 +34,10 @@ const modelConfigSchema = z.object({
   enablePlayerMomentum: z.boolean(),
   enableRestFactor: z.boolean(),
   confidenceMultiplier: z.number().min(1).max(10),
+  dynamicWeights: z.record(z.string(), z.number().min(0).max(0.5)).optional()
+    .describe("Optional weights for paid data feed factors, keyed by factorKey (e.g. 'xGoals': 0.05)"),
+  enabledFeeds: z.array(z.string()).optional()
+    .describe("Slugs of paid data feeds to enable (e.g. ['moneypuck-xg'])"),
 });
 
 const existingModels = MODEL_REGISTRY.map(
@@ -89,6 +94,19 @@ When you propose a model, include a brief cost summary based on which data feeds
 
 All preview runs use cached/archived data with no additional paid API calls. Daily prediction runs use 1 Odds API call for game odds + 1 for futures + up to 5 for player props = ~$0.01/day.
 
+PAID DATA FEEDS (optional, cost money per API call):
+Use the discover_feeds tool to see currently available paid feeds. When proposing a model with paid feeds:
+- Include the feed's factorKey in dynamicWeights with its weight (e.g. "xGoals": 0.05)
+- Include the feed's slug in enabledFeeds (e.g. ["moneypuck-xg"])
+- The total of ALL weights (fixed 12 + dynamic) must still sum to ~1.0
+- When adding dynamic weights, reduce existing fixed weights proportionally to maintain the sum
+- Always call estimate_feed_cost before proposing and mention the daily cost
+- Warn if estimated daily cost exceeds $1.00
+- Each paid feed calls its API once per team per day (32 teams)
+- Daily cost per feed = costPerCall x 32
+- Preview cost is always $0.00 (uses cached data only)
+- Recommend starting with one paid feed and measuring accuracy improvement before adding more
+
 GUIDELINES:
 - Ask clarifying questions if the request is vague
 - Explain your reasoning when proposing weights
@@ -110,10 +128,38 @@ export async function POST(request: Request) {
     tools: {
       propose_model: tool({
         description:
-          "Propose a model configuration for the user to preview and test against recent games",
+          "Propose a model configuration for the user to preview and test against recent games. Can include dynamicWeights and enabledFeeds for paid data feed factors.",
         inputSchema: modelConfigSchema,
         execute: async (input) => {
           return { name: input.name, status: "proposed" };
+        },
+      }),
+      discover_feeds: tool({
+        description:
+          "List available paid data feeds that can be incorporated into a model, including cost per call and what factor each provides",
+        inputSchema: z.object({}),
+        execute: async () => {
+          const feeds = await getFeedRegistry();
+          return feeds.map((f) => ({
+            slug: f.slug,
+            name: f.name,
+            description: f.description,
+            factorKey: f.factorKey,
+            factorLabel: f.factorLabel,
+            costPerCall: f.costPerCall,
+            dailyCost: Math.round(f.costPerCall * 32 * 100) / 100,
+            isActive: f.isActive,
+          }));
+        },
+      }),
+      estimate_feed_cost: tool({
+        description:
+          "Estimate daily and monthly costs for a set of paid data feeds before proposing a model that uses them",
+        inputSchema: z.object({
+          feedSlugs: z.array(z.string()).describe("Slugs of the feeds to estimate costs for"),
+        }),
+        execute: async ({ feedSlugs }) => {
+          return await estimateFeedCosts(feedSlugs);
         },
       }),
     },

@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/history",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/feeds",
+      "schedule": "30 14 * * *"
     }
   ]
 }

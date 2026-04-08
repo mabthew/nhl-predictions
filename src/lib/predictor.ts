@@ -15,6 +15,7 @@ import {
 import { TeamLineCombos, StartingGoalieInfo, calculatePlayerMomentum } from "./daily-faceoff";
 import { DEFAULT_MODEL } from "./model-configs";
 import { buildTeamMetrics, RestInfo } from "./nhl-api";
+import { computeDynamicScore, FeedMetadata } from "./data-feeds";
 import {
   getConsensusTotal,
   getPuckLineOdds,
@@ -75,6 +76,8 @@ export function generatePredictions(
   modelConfig?: ModelConfig,
   startingGoalies?: Map<string, StartingGoalieInfo>,
   restMap?: Map<string, RestInfo>,
+  feedDataMap?: Map<string, Map<string, number>>,
+  feedMetadataMap?: Map<string, FeedMetadata>,
 ): GamePrediction[] {
   const model = modelConfig ?? DEFAULT_MODEL;
   const teamMetricsMap = new Map<string, TeamMetrics>();
@@ -163,6 +166,16 @@ export function generatePredictions(
 
     homeMetrics.compositeScore = calculateComposite(homeMetrics, true, model);
     awayMetrics.compositeScore = calculateComposite(awayMetrics, false, model);
+
+    // Add dynamic factor contributions from paid feeds
+    if (model.dynamicWeights && feedDataMap && feedMetadataMap) {
+      homeMetrics.compositeScore += computeDynamicScore(
+        game.homeTeam.abbrev, model.dynamicWeights, feedDataMap, feedMetadataMap
+      );
+      awayMetrics.compositeScore += computeDynamicScore(
+        game.awayTeam.abbrev, model.dynamicWeights, feedDataMap, feedMetadataMap
+      );
+    }
 
     const delta = homeMetrics.compositeScore - awayMetrics.compositeScore;
     const predictedWinner: "home" | "away" = delta >= 0 ? "home" : "away";
@@ -294,7 +307,7 @@ function findTeamSummary(
  * Normalize a metric to a 0-100 scale using league-wide z-scores.
  * This ensures scores are consistent regardless of which teams are playing today.
  */
-function zScoreNormalize(value: number, avg: number, sd: number, invert = false): number {
+export function zScoreNormalize(value: number, avg: number, sd: number, invert = false): number {
   const z = (value - avg) / sd;
   const adjusted = invert ? -z : z;
   // Map z-score to 0-100: z=0 → 50, z=+2 → ~90, z=-2 → ~10

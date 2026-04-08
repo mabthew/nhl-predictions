@@ -5,6 +5,7 @@ import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
 import { findBestBet, buildParlay } from "./betting-features";
 import { fetchLineCombos, fetchStartingGoalies, TeamLineCombos, StartingGoalieInfo } from "./daily-faceoff";
+import { getActiveFeeds, loadFeedData, getFeedMetadata } from "./data-feeds";
 
 function getForecastTier(dayIndex: number): ForecastTier {
   if (dayIndex <= 1) return "full";
@@ -124,6 +125,17 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
     );
     const playerProfileMap = new Map<string, PlayerProfile | null>(playerProfileEntries);
 
+    // Load paid feed data for any active feeds (default model has no dynamic weights, but custom models might)
+    const activeFeeds = await getActiveFeeds();
+    const activeFeedSlugs = activeFeeds.map((f) => f.slug);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const [feedDataMap, feedMetadataMap] = activeFeedSlugs.length > 0
+      ? await Promise.all([
+          loadFeedData(activeFeedSlugs, Array.from(teamAbbrevs), todayStr),
+          getFeedMetadata(activeFeedSlugs),
+        ])
+      : [new Map(), new Map()] as [Map<string, Map<string, number>>, Map<string, import("./data-feeds").FeedMetadata>];
+
     const predictions = generatePredictions(
       finalGames,
       standings,
@@ -139,6 +151,8 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
       undefined, // modelConfig — uses default (v3)
       startingGoalies,
       restMap,
+      feedDataMap.size > 0 ? feedDataMap : undefined,
+      feedMetadataMap.size > 0 ? feedMetadataMap : undefined,
     );
 
     // Enrich each prediction with forecast tier, data availability, and live status

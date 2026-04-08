@@ -14,6 +14,8 @@ interface ModelConfig {
   enablePlayerMomentum: boolean;
   enableRestFactor: boolean;
   confidenceMultiplier: number;
+  dynamicWeights?: Record<string, number>;
+  enabledFeeds?: string[];
 }
 
 interface DataAvailability {
@@ -122,13 +124,27 @@ export default function ModelPreviewCard({
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
 
-  const weightSum = Object.values(config.weights).reduce((a, b) => a + b, 0);
+  const fixedSum = Object.values(config.weights).reduce((a, b) => a + b, 0);
+  const dynamicSum = config.dynamicWeights
+    ? Object.values(config.dynamicWeights).reduce((a, b) => a + b, 0)
+    : 0;
+  const weightSum = fixedSum + dynamicSum;
   const validSum = weightSum >= 0.95 && weightSum <= 1.05;
 
   const sorted = Object.entries(config.weights)
     .filter(([, v]) => v > 0)
     .sort(([, a], [, b]) => b - a);
   const maxWeight = sorted[0]?.[1] ?? 1;
+
+  const dynamicSorted = config.dynamicWeights
+    ? Object.entries(config.dynamicWeights)
+        .filter(([, v]) => v > 0)
+        .sort(([, a], [, b]) => b - a)
+    : [];
+
+  const dailyFeedCost = config.enabledFeeds?.length
+    ? (config.enabledFeeds.length * 32 * 0.003) // rough estimate per feed
+    : 0;
 
   function getDateRange() {
     if (rangePreset === "custom") {
@@ -226,6 +242,23 @@ export default function ModelPreviewCard({
             </span>
           </div>
         ))}
+        {dynamicSorted.map(([key, value]) => (
+          <div key={key} className="flex items-center gap-2 text-xs">
+            <span className="w-32 text-amber-600 truncate flex items-center gap-1">
+              <span className="text-[9px]">$</span>
+              {WEIGHT_NAMES[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
+            </span>
+            <div className="flex-1 bg-white rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-amber-500"
+                style={{ width: `${(value / maxWeight) * 100}%` }}
+              />
+            </div>
+            <span className="w-10 text-right font-medium text-amber-600">
+              {(value * 100).toFixed(1)}%
+            </span>
+          </div>
+        ))}
       </div>
 
       {/* Feature gates + scalars */}
@@ -255,6 +288,11 @@ export default function ModelPreviewCard({
             Rest Factor
           </span>
         )}
+        {config.enabledFeeds?.map((slug) => (
+          <span key={slug} className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+            $ {slug}
+          </span>
+        ))}
         <span className="text-[10px] bg-gray-100 text-medium-gray px-1.5 py-0.5 rounded">
           Home +{config.homeIceBonus}
         </span>
@@ -322,9 +360,18 @@ export default function ModelPreviewCard({
             <div className="text-[10px] text-medium-gray space-y-0.5">
               <div>~{est.games} games &middot; {est.duration} estimated</div>
               <div>
-                <span className="text-green-600 font-medium">$0.00</span>
+                <span className="text-green-600 font-medium">Preview: $0.00</span>
                 {" "}&mdash; NHL API: {est.nhlCalls} calls (free) &middot; DailyFaceoff: {est.dfCalls} calls (free) &middot; Odds API: 0 calls
               </div>
+              {dailyFeedCost > 0 && (
+                <div>
+                  <span className={`font-medium ${dailyFeedCost > 1 ? "text-amber-600" : "text-medium-gray"}`}>
+                    Daily production: ~${dailyFeedCost.toFixed(2)}/day
+                  </span>
+                  {" "}&mdash; {config.enabledFeeds?.length} paid feed{(config.enabledFeeds?.length ?? 0) > 1 ? "s" : ""} &times; 32 teams
+                  {dailyFeedCost > 1 && <span className="text-amber-600 ml-1">(exceeds $1/day warning)</span>}
+                </div>
+              )}
             </div>
           )}
           <button

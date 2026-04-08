@@ -12,6 +12,7 @@ import { generatePredictions } from "@/lib/predictor";
 import { DEFAULT_MODEL } from "@/lib/model-configs";
 import { loadOddsFromCache, loadOddsSnapshot } from "@/lib/odds-cache";
 import { fetchLineCombos } from "@/lib/daily-faceoff";
+import { loadFeedDataRange, getFeedMetadata } from "@/lib/data-feeds";
 import type { ModelConfig, NHLGame, NHLClubStats, PlayerProfile, OddsResponse, FuturesOdds } from "@/lib/types";
 import type { TeamLineCombos } from "@/lib/daily-faceoff";
 import type { RestInfo } from "@/lib/nhl-api";
@@ -43,6 +44,8 @@ export async function POST(request: NextRequest) {
       enablePlayerMomentum: body.enablePlayerMomentum ?? false,
       enableRestFactor: body.enableRestFactor ?? false,
       confidenceMultiplier: body.confidenceMultiplier ?? 3,
+      dynamicWeights: body.dynamicWeights,
+      enabledFeeds: body.enabledFeeds,
     };
 
     const baseline = DEFAULT_MODEL;
@@ -196,6 +199,22 @@ export async function POST(request: NextRequest) {
       })
     );
 
+    // Load paid feed data from cache (never live fetch during preview)
+    const feedSlugs = proposed.enabledFeeds ?? [];
+    const [feedDataByDate, feedMetadataMap] = feedSlugs.length > 0
+      ? await Promise.all([
+          loadFeedDataRange(feedSlugs, dates),
+          getFeedMetadata(feedSlugs),
+        ])
+      : [new Map(), new Map()] as const;
+
+    let feedDaysAvailable = 0;
+    if (feedSlugs.length > 0) {
+      for (const date of dates) {
+        if (feedDataByDate.has(date)) feedDaysAvailable++;
+      }
+    }
+
     // Run predictions
     let proposedCorrect = 0;
     let baselineCorrect = 0;
@@ -219,9 +238,11 @@ export async function POST(request: NextRequest) {
       const dateOdds = oddsSnapshots.get(date) ?? [];
       const dateRestMap = restMaps.get(date);
 
+      const dateFeedData = feedDataByDate.get(date);
       const proposedPreds = generatePredictions(
         dayGames, standings, clubStatsMap, injuries, dateOdds, [], teamStatsMap,
-        undefined, futuresMap, playerProfileMap, lineCombosMap, proposed, undefined, dateRestMap
+        undefined, futuresMap, playerProfileMap, lineCombosMap, proposed, undefined, dateRestMap,
+        dateFeedData, feedMetadataMap.size > 0 ? feedMetadataMap : undefined
       );
       const baselinePreds = generatePredictions(
         dayGames, standings, clubStatsMap, injuries, dateOdds, [], teamStatsMap,
@@ -296,6 +317,11 @@ export async function POST(request: NextRequest) {
         oddsDaysAvailable,
         oddsDaysTotal: dates.length,
         playerProps: false,
+        feeds: feedSlugs.length > 0 ? {
+          enabled: feedSlugs,
+          daysAvailable: feedDaysAvailable,
+          daysTotal: dates.length,
+        } : undefined,
       },
     });
   } catch (error) {

@@ -119,3 +119,38 @@ model ApiUsageLog {
   @@index([createdAt])
   @@index([provider])
 }
+
+model DataFeed {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  description     String
+  provider        String
+  endpoint        String
+  authEnvVar      String?
+  costPerCall     Float    @default(0)
+  cacheDurationS  Int      @default(86400)
+  factorKey       String   @unique
+  factorLabel     String
+  leagueAvg       Float
+  leagueSd        Float
+  invert          Boolean  @default(false)
+  isActive        Boolean  @default(false)
+  methodologyIcon String?
+  methodologyBold String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model FeedCache {
+  id         Int      @id @default(autoincrement())
+  feedSlug   String
+  teamAbbrev String
+  date       String
+  value      Float
+  rawData    Json?
+  createdAt  DateTime @default(now())
+
+  @@unique([feedSlug, teamAbbrev, date])
+  @@index([feedSlug, date])
+}

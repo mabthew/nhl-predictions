@@ -301,6 +301,70 @@ export default function ModelBuilderChat() {
                       );
                     }
 
+                    if (
+                      part.type === "tool-discover_feeds" &&
+                      part.state === "output-available" &&
+                      part.output
+                    ) {
+                      const feeds = part.output as Array<{
+                        slug: string;
+                        name: string;
+                        description: string;
+                        factorKey: string;
+                        factorLabel: string;
+                        costPerCall: number;
+                        dailyCost: number;
+                        isActive: boolean;
+                      }>;
+                      return (
+                        <div
+                          key={i}
+                          className="bg-amber-50 border border-amber-200 rounded-xl p-3 my-2 max-w-lg"
+                        >
+                          <div className="text-xs font-semibold text-amber-800 mb-2">
+                            Available Paid Data Feeds
+                          </div>
+                          <div className="space-y-2">
+                            {feeds.map((f) => (
+                              <div
+                                key={f.slug}
+                                className="bg-white rounded-lg p-2 text-xs"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-charcoal">
+                                    {f.name}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                      f.isActive
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-gray-100 text-medium-gray"
+                                    }`}
+                                  >
+                                    {f.isActive ? "Active" : "Inactive"}
+                                  </span>
+                                </div>
+                                <div className="text-medium-gray mt-0.5">
+                                  {f.description}
+                                </div>
+                                <div className="flex gap-3 mt-1 text-[10px]">
+                                  <span className="text-amber-700">
+                                    Factor: {f.factorLabel}
+                                  </span>
+                                  <span className="text-amber-700">
+                                    ${f.costPerCall}/call
+                                  </span>
+                                  <span className="text-amber-700">
+                                    ~${f.dailyCost.toFixed(2)}/day
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return null;
                   })}
                 </div>

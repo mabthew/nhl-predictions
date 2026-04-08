@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { validateDynamicWeights, validateFeedSlugs, validateFeedCosts } from "@/lib/data-feeds";
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -19,21 +20,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate weights sum
-    const weightSum = Object.values(weights as Record<string, number>).reduce(
+    // Validate total weights sum (fixed 12 + dynamic)
+    const fixedSum = Object.values(weights as Record<string, number>).reduce(
       (a, b) => a + b,
       0
     );
-    if (weightSum < 0.95 || weightSum > 1.05) {
+    const dynamicWeights: Record<string, number> = body.dynamicWeights ?? {};
+    const dynamicSum = Object.values(dynamicWeights).reduce(
+      (a: number, b: number) => a + b,
+      0
+    );
+    const totalSum = fixedSum + dynamicSum;
+
+    if (totalSum < 0.95 || totalSum > 1.05) {
       return NextResponse.json(
         {
-          error: `Weights sum to ${weightSum.toFixed(3)}, must be between 0.95 and 1.05`,
+          error: `Weights sum to ${totalSum.toFixed(3)} (fixed: ${fixedSum.toFixed(3)}, dynamic: ${dynamicSum.toFixed(3)}), must be between 0.95 and 1.05`,
         },
         { status: 400 }
       );
     }
 
-    // Validate gate/weight consistency
+    // Validate gate/weight consistency for fixed factors
     if (weights.futuresMarket > 0 && !body.enableFutures) {
       return NextResponse.json(
         { error: "enableFutures must be true when futuresMarket weight > 0" },
@@ -56,6 +64,40 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate dynamic weights match real DataFeed factorKeys
+    if (dynamicSum > 0) {
+      const { valid, invalidKeys } = await validateDynamicWeights(dynamicWeights);
+      if (!valid) {
+        return NextResponse.json(
+          { error: `Unknown dynamic weight keys: ${invalidKeys.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate enabled feed slugs are active
+    const enabledFeeds: string[] = body.enabledFeeds ?? [];
+    if (enabledFeeds.length > 0) {
+      const { valid, invalidSlugs } = await validateFeedSlugs(enabledFeeds);
+      if (!valid) {
+        return NextResponse.json(
+          { error: `Inactive or unknown feeds: ${invalidSlugs.join(", ")}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Cost guard rails
+    if (enabledFeeds.length > 0) {
+      const costCheck = await validateFeedCosts(enabledFeeds);
+      if (!costCheck.ok) {
+        return NextResponse.json(
+          { error: costCheck.error },
+          { status: 400 }
+        );
+      }
+    }
+
     const config = {
       weights,
       homeIceBonus: body.homeIceBonus ?? 2,
@@ -65,6 +107,8 @@ export async function POST(request: Request) {
       enablePlayerMomentum: body.enablePlayerMomentum ?? false,
       enableRestFactor: body.enableRestFactor ?? false,
       confidenceMultiplier: body.confidenceMultiplier ?? 3,
+      ...(dynamicSum > 0 && { dynamicWeights }),
+      ...(enabledFeeds.length > 0 && { enabledFeeds }),
     };
 
     const chatId =

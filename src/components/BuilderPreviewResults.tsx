@@ -10,6 +10,11 @@ interface DataAvailability {
   oddsDaysAvailable: number;
   oddsDaysTotal: number;
   playerProps: boolean;
+  feeds?: {
+    enabled: string[];
+    daysAvailable: number;
+    daysTotal: number;
+  };
 }
 
 interface PreviewData {
@@ -118,6 +123,25 @@ export default function BuilderPreviewResults({
             <span>{avail.odds ? (avail.oddsDaysAvailable === avail.oddsDaysTotal ? "\u2713" : "~") : "\u2013"}</span>
             Odds{avail.odds ? ` (${avail.oddsDaysAvailable}/${avail.oddsDaysTotal})` : ""}
           </span>
+          {avail.feeds && avail.feeds.enabled.length > 0 && (
+            <span
+              title={
+                avail.feeds.daysAvailable > 0
+                  ? `Paid feed data available for ${avail.feeds.daysAvailable}/${avail.feeds.daysTotal} days`
+                  : "No cached feed data available yet. Run the feed cron to populate."
+              }
+              className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                avail.feeds.daysAvailable > 0
+                  ? avail.feeds.daysAvailable === avail.feeds.daysTotal
+                    ? "bg-amber-50 text-amber-700"
+                    : "bg-amber-50 text-amber-600"
+                  : "bg-gray-100 text-medium-gray"
+              }`}
+            >
+              <span>{avail.feeds.daysAvailable > 0 ? (avail.feeds.daysAvailable === avail.feeds.daysTotal ? "\u2713" : "~") : "\u2013"}</span>
+              $ Feeds ({avail.feeds.daysAvailable}/{avail.feeds.daysTotal})
+            </span>
+          )}
         </div>
       )}
 

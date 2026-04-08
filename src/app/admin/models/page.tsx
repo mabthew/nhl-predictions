@@ -204,22 +204,47 @@ export default async function ModelsPage() {
                         .filter(([, v]) => v > 0)
                         .sort(([, a], [, b]) => b - a);
                       const maxWeight = sorted[0]?.[1] ?? 1;
-                      return sorted.map(([key, value]) => (
-                        <div key={key} className="flex items-center gap-2 text-xs">
-                          <span className="w-36 text-medium-gray truncate">
-                            {formatWeightName(key)}
-                          </span>
-                          <div className="flex-1 bg-light-gray rounded-full h-2 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-charcoal"
-                              style={{ width: `${(value / maxWeight) * 100}%` }}
-                            />
-                          </div>
-                          <span className="w-10 text-right font-medium text-charcoal">
-                            {(value * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                      ));
+                      const dynamicSorted = model.dynamicWeights
+                        ? Object.entries(model.dynamicWeights)
+                            .filter(([, v]) => v > 0)
+                            .sort(([, a], [, b]) => b - a)
+                        : [];
+                      return (
+                        <>
+                          {sorted.map(([key, value]) => (
+                            <div key={key} className="flex items-center gap-2 text-xs">
+                              <span className="w-36 text-medium-gray truncate">
+                                {formatWeightName(key)}
+                              </span>
+                              <div className="flex-1 bg-light-gray rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-charcoal"
+                                  style={{ width: `${(value / maxWeight) * 100}%` }}
+                                />
+                              </div>
+                              <span className="w-10 text-right font-medium text-charcoal">
+                                {(value * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          ))}
+                          {dynamicSorted.map(([key, value]) => (
+                            <div key={key} className="flex items-center gap-2 text-xs">
+                              <span className="w-36 text-amber-600 truncate">
+                                $ {formatWeightName(key)}
+                              </span>
+                              <div className="flex-1 bg-light-gray rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-amber-500"
+                                  style={{ width: `${(value / maxWeight) * 100}%` }}
+                                />
+                              </div>
+                              <span className="w-10 text-right font-medium text-amber-600">
+                                {(value * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          ))}
+                        </>
+                      );
                     })()}
                   </div>
 
@@ -288,6 +313,9 @@ function formatWeightName(key: string): string {
     futuresMarket: "Futures Market",
     shotsAgainstPerGame: "Shots Against",
     faceoffWinPct: "Faceoff Win",
+    restFactor: "Rest Factor",
+    playerMomentum: "Player Momentum",
   };
-  return names[key] ?? key;
+  // For dynamic weights from paid feeds, title-case the key
+  return names[key] ?? key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase());
 }

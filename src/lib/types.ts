@@ -344,6 +344,8 @@ export interface ModelConfig {
   enablePlayerMomentum: boolean;
   enableRestFactor: boolean;
   confidenceMultiplier: number;
+  dynamicWeights?: Record<string, number>;
+  enabledFeeds?: string[];
 }
 
 // ── Stanley Cup Futures Types ──
