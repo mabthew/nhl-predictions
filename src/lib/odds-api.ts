@@ -63,7 +63,7 @@ export async function fetchGameOdds(): Promise<OddsResponse[]> {
 
   try {
     const res = await oddsApiFetch(
-      `${ODDS_API_BASE}/${SPORT}/odds?apiKey=__API_KEY__&regions=us&markets=spreads,totals&oddsFormat=american`
+      `${ODDS_API_BASE}/${SPORT}/odds?apiKey=__API_KEY__&regions=us&markets=h2h,spreads,totals&oddsFormat=american`
     );
     if (!res) return [];
     return await res.json();
@@ -162,6 +162,28 @@ export function getPuckLineOdds(
           home: { spread: home.point, price: home.price },
           away: { spread: away.point, price: away.price },
         };
+      }
+    }
+  }
+
+  return null;
+}
+
+export function getMoneylineOdds(
+  odds: OddsResponse[],
+  homeTeam: string,
+  awayTeam: string
+): { homeOdds: number; awayOdds: number } | null {
+  const game = findGameOdds(odds, homeTeam, awayTeam);
+  if (!game) return null;
+
+  for (const bookmaker of game.bookmakers) {
+    const h2h = bookmaker.markets.find((m) => m.key === "h2h");
+    if (h2h) {
+      const home = h2h.outcomes.find((o) => o.name === game.home_team);
+      const away = h2h.outcomes.find((o) => o.name === game.away_team);
+      if (home && away) {
+        return { homeOdds: home.price, awayOdds: away.price };
       }
     }
   }

@@ -1,13 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { GamePrediction, ForecastTier } from "@/lib/types";
+import { GamePrediction, ForecastTier, BestBet, Parlay } from "@/lib/types";
 import DateStrip from "./DateStrip";
 import DaySectionHeader from "./DaySectionHeader";
 import GameCard from "./GameCard";
+import BestBetCard from "./BestBetCard";
+import ParlayCard from "./ParlayCard";
 
 interface WeekViewProps {
   predictions: GamePrediction[];
+  bestBets?: Record<string, BestBet>;
+  parlays?: Record<string, Parlay>;
 }
 
 const TIER_BANNERS: Partial<Record<ForecastTier, string>> = {
@@ -24,7 +28,7 @@ function getToday(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-export default function WeekView({ predictions }: WeekViewProps) {
+export default function WeekView({ predictions, bestBets, parlays }: WeekViewProps) {
   // Group predictions by date
   const dateMap = new Map<string, GamePrediction[]>();
   for (const pred of predictions) {
@@ -104,10 +108,11 @@ export default function WeekView({ predictions }: WeekViewProps) {
       />
 
       <div className="space-y-10 mt-6">
-        {sortedDates.map((date) => {
+        {sortedDates.map((date, dateIndex) => {
           const games = dateMap.get(date)!;
           const tier = games[0].forecastTier;
           const banner = TIER_BANNERS[tier];
+          const isFirstDay = dateIndex === 0;
 
           const hasLiveGames = games.some((g) => g.gameStatus === "live");
 
@@ -149,6 +154,13 @@ export default function WeekView({ predictions }: WeekViewProps) {
                   </svg>
                   <p className="text-xs text-accent-blue">{banner}</p>
                 </div>
+              )}
+
+              {isFirstDay && bestBets?.[date] && (
+                <BestBetCard bestBet={bestBets[date]} />
+              )}
+              {isFirstDay && parlays?.[date] && (
+                <ParlayCard parlay={parlays[date]} />
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">

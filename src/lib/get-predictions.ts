@@ -1,8 +1,9 @@
-import { NHLClubStats, NHLGame, NHLTeamSummaryStats, PredictionsResponse, ForecastTier, GameStatus, LiveGameScore, FuturesOdds, PlayerProfile } from "./types";
+import { NHLClubStats, NHLGame, NHLTeamSummaryStats, PredictionsResponse, ForecastTier, GameStatus, LiveGameScore, FuturesOdds, PlayerProfile, BestBet, Parlay, GamePrediction } from "./types";
 import { fetchUpcomingGames, fetchStandings, fetchClubStats, fetchTeamStats, fetchLiveScores, fetchPlayerProfile, fetchSchedule, detectRestInfo, RestInfo } from "./nhl-api";
 import { loadOddsFromCache } from "./odds-cache";
 import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
+import { findBestBet, buildParlay } from "./betting-features";
 import { fetchLineCombos, fetchStartingGoalies, TeamLineCombos, StartingGoalieInfo } from "./daily-faceoff";
 
 function getForecastTier(dayIndex: number): ForecastTier {
@@ -168,11 +169,30 @@ export async function getPredictions(): Promise<PredictionsResponse | null> {
       }
     }
 
+    // Compute best bets and parlays per day
+    const dateGroups = new Map<string, GamePrediction[]>();
+    for (const pred of predictions) {
+      const existing = dateGroups.get(pred.gameDate) ?? [];
+      existing.push(pred);
+      dateGroups.set(pred.gameDate, existing);
+    }
+
+    const bestBets: Record<string, BestBet> = {};
+    const parlays: Record<string, Parlay> = {};
+    for (const [date, dayGames] of dateGroups) {
+      const best = findBestBet(dayGames);
+      if (best) bestBets[date] = best;
+      const parlay = buildParlay(dayGames);
+      if (parlay) parlays[date] = parlay;
+    }
+
     return {
       date: finalDate,
       generatedAt: new Date().toISOString(),
       predictions,
       futures,
+      bestBets,
+      parlays,
     };
   } catch (error) {
     console.error("Failed to load predictions:", error);

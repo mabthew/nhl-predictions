@@ -241,6 +241,12 @@ export interface PuckLine {
   homeOdds: number;
   awaySpread: number;
   awayOdds: number;
+  confidence?: number; // 15-85, how likely the favorite covers -1.5
+}
+
+export interface Moneyline {
+  homeOdds: number;
+  awayOdds: number;
 }
 
 export interface GamePrediction {
@@ -255,6 +261,7 @@ export interface GamePrediction {
   overUnder: OverUnderPrediction;
   playerProp: PlayerPropPick | null;
   puckLine?: PuckLine;
+  moneyline?: Moneyline;
   keyFactors: string[];
   dayIndex: number;
   forecastTier: ForecastTier;
@@ -268,6 +275,44 @@ export interface PredictionsResponse {
   generatedAt: string;
   predictions: GamePrediction[];
   futures?: FuturesOdds[];
+  bestBets?: Record<string, BestBet>;
+  parlays?: Record<string, Parlay>;
+}
+
+// ── Betting Feature Types ──
+
+export type BetType = "moneyline" | "puck_line" | "over_under" | "player_prop";
+
+export interface BestBet {
+  gameId: number;
+  betType: BetType;
+  description: string;
+  confidence: number;
+  odds: number;
+  impliedProbability: number;
+  edge: number;
+  score: number;
+  gameLabel: string;
+  teamAbbrev?: string;
+  reasoning: string;
+}
+
+export interface ParlayLeg {
+  gameId: number;
+  betType: BetType;
+  description: string;
+  confidence: number;
+  odds: number;
+  teamAbbrev?: string;
+  gameLabel: string;
+  reasoning: string;
+}
+
+export interface Parlay {
+  legs: ParlayLeg[];
+  combinedOdds: number;
+  combinedProbability: number;
+  potentialPayout: number;
 }
 
 // ── Model Configuration Types ──

@@ -126,6 +126,33 @@ export default function GameCard({ prediction }: GameCardProps) {
                   <span className="text-xs font-bold text-charcoal ml-1">({formatOdds(prediction.puckLine.homeOdds)})</span>
                 </div>
               </div>
+              {/* Spread confidence */}
+              {prediction.puckLine?.confidence != null && (
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Spread Confidence</span>
+                  <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        prediction.puckLine.confidence >= 50
+                          ? "bg-green-500"
+                          : prediction.puckLine.confidence >= 35
+                            ? "bg-yellow-500"
+                            : "bg-espn-red"
+                      }`}
+                      style={{ width: `${prediction.puckLine.confidence}%` }}
+                    />
+                  </div>
+                  <span className={`text-[11px] font-bold ${
+                    prediction.puckLine.confidence >= 50
+                      ? "text-green-600"
+                      : prediction.puckLine.confidence >= 35
+                        ? "text-yellow-600"
+                        : "text-espn-red"
+                  }`}>
+                    {prediction.puckLine.confidence}%
+                  </span>
+                </div>
+              )}
               {/* Winner pick */}
               <div className="pt-2 mt-2 border-t border-border-gray/40 flex items-center justify-center gap-2">
                 <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Favorite</span>

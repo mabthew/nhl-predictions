@@ -43,7 +43,11 @@ export default async function Home() {
         )}
 
         {data && data.predictions.length > 0 ? (
-          <WeekView predictions={data.predictions} />
+          <WeekView
+            predictions={data.predictions}
+            bestBets={data.bestBets}
+            parlays={data.parlays}
+          />
         ) : (
           <EmptyState />
         )}

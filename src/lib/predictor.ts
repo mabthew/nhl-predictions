@@ -10,6 +10,7 @@ import {
   InjuryReport,
   OddsResponse,
   PlayerProfile,
+  PuckLine,
 } from "./types";
 import { TeamLineCombos, StartingGoalieInfo, calculatePlayerMomentum } from "./daily-faceoff";
 import { DEFAULT_MODEL } from "./model-configs";
@@ -17,10 +18,11 @@ import { buildTeamMetrics, RestInfo } from "./nhl-api";
 import {
   getConsensusTotal,
   getPuckLineOdds,
+  getMoneylineOdds,
   findBestPlayerProp,
 } from "./odds-api";
 import { getTeamInjuries, TEAM_NAMES } from "./injuries";
-import { clamp } from "./utils";
+import { clamp, americanToImpliedProbability } from "./utils";
 
 // League average baselines for normalization (2024-25 season)
 const LEAGUE_AVG = {
@@ -198,13 +200,40 @@ export function generatePredictions(
 
     // Get puck line (spreads) data
     const puckLineData = getPuckLineOdds(odds, homeName, awayName);
-    const puckLine = puckLineData
+    const puckLine: PuckLine | undefined = puckLineData
       ? {
           homeSpread: puckLineData.home.spread,
           homeOdds: puckLineData.home.price,
           awaySpread: puckLineData.away.spread,
           awayOdds: puckLineData.away.price,
         }
+      : undefined;
+
+    // Calculate puck line confidence
+    if (puckLine) {
+      const favoriteIsHome = puckLine.homeSpread < 0;
+      const winnerIsFavorite = (predictedWinner === "home") === favoriteIsHome;
+
+      if (winnerIsFavorite) {
+        // Predicted winner has -1.5: must win by 2+, harder than just winning
+        const favoriteOdds = predictedWinner === "home" ? puckLine.homeOdds : puckLine.awayOdds;
+        const impliedProb = americanToImpliedProbability(favoriteOdds);
+        puckLine.confidence = Math.round(clamp((winnerConfidence / 100) * impliedProb * 100, 15, 85));
+      } else {
+        // Predicted winner is underdog (+1.5): covers by winning or losing by 1
+        const underdogOdds = predictedWinner === "home" ? puckLine.homeOdds : puckLine.awayOdds;
+        const impliedProb = americanToImpliedProbability(underdogOdds);
+        puckLine.confidence = Math.round(clamp(
+          winnerConfidence + (1 - winnerConfidence / 100) * impliedProb * 50,
+          15, 85
+        ));
+      }
+    }
+
+    // Get moneyline odds
+    const moneylineData = getMoneylineOdds(odds, homeName, awayName);
+    const moneyline = moneylineData
+      ? { homeOdds: moneylineData.homeOdds, awayOdds: moneylineData.awayOdds }
       : undefined;
 
     const keyFactors = generateKeyFactors(
@@ -226,6 +255,7 @@ export function generatePredictions(
       overUnder,
       playerProp,
       puckLine,
+      moneyline,
       keyFactors,
       dayIndex: dayIdx,
       forecastTier: dayIdx <= 1 ? "full" : dayIdx <= 3 ? "early" : "preliminary",
