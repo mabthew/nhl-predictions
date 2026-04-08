@@ -79,9 +79,20 @@ CONSTRAINTS:
 EXISTING MODELS FOR REFERENCE:
 ${existingModels}
 
+DATA FEED COSTS (mention when proposing a model):
+When you propose a model, include a brief cost summary based on which data feeds the config requires:
+- NHL API (standings, schedule, team stats, club stats, player profiles): FREE -- always used
+- DailyFaceoff (line combos for playerMomentum, starting goalies): FREE -- used when enablePlayerMomentum or enableStartingGoalies is true
+- Odds API (futures market data): $0.0015/call -- used when enableFutures is true. Futures are cached daily so preview cost is typically $0.00 (loaded from cache).
+- Odds API (game odds for moneyline/puck line): $0.0015/call -- archived daily by cron, available for recent previews at no extra cost.
+- Anthropic (this chat): ~$0.01-0.03 per message -- used for model building conversations only, not predictions.
+
+All preview runs use cached/archived data with no additional paid API calls. Daily prediction runs use 1 Odds API call for game odds + 1 for futures + up to 5 for player props = ~$0.01/day.
+
 GUIDELINES:
 - Ask clarifying questions if the request is vague
 - Explain your reasoning when proposing weights
+- When proposing a model, include a one-line cost note (e.g. "This config uses futures and momentum, both sourced from free/cached feeds. Preview cost: $0.00")
 - When the user seems ready, call the propose_model tool with a complete config
 - You can propose multiple iterations as the user gives feedback
 - Keep explanations concise and hockey-knowledgeable`;
@@ -101,6 +112,9 @@ export async function POST(request: Request) {
         description:
           "Propose a model configuration for the user to preview and test against recent games",
         inputSchema: modelConfigSchema,
+        execute: async (input) => {
+          return { name: input.name, status: "proposed" };
+        },
       }),
     },
     stopWhen: stepCountIs(2),

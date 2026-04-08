@@ -1,6 +1,21 @@
 "use client";
 
+interface DataAvailability {
+  futures: boolean;
+  rest: boolean;
+  starPower: boolean;
+  playerMomentum: boolean;
+  startingGoalies: boolean;
+  odds: boolean;
+  oddsDaysAvailable: number;
+  oddsDaysTotal: number;
+  playerProps: boolean;
+}
+
 interface PreviewData {
+  startDate?: string;
+  endDate?: string;
+  totalDays?: number;
   totalGames: number;
   proposed: { correct: number; total: number; accuracy: number };
   baseline: {
@@ -22,7 +37,30 @@ interface PreviewData {
     baselineCorrect: boolean;
     baselineConfidence: number;
   }>;
+  dataAvailability?: DataAvailability;
 }
+
+function formatShortDate(dateStr: string) {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+const DATA_SOURCES: Array<{
+  key: keyof DataAvailability;
+  label: string;
+  unavailableReason: string;
+}> = [
+  { key: "futures", label: "Futures", unavailableReason: "No cached futures data" },
+  { key: "rest", label: "Rest", unavailableReason: "Could not compute rest data" },
+  { key: "starPower", label: "Star Power", unavailableReason: "No player profiles available" },
+  { key: "playerMomentum", label: "Momentum", unavailableReason: "No line combo data available" },
+  { key: "startingGoalies", label: "Goalies", unavailableReason: "Not available for completed games" },
+  { key: "playerProps", label: "Props", unavailableReason: "Only available for upcoming games" },
+];
 
 export default function BuilderPreviewResults({
   data,
@@ -30,12 +68,58 @@ export default function BuilderPreviewResults({
   data: PreviewData;
 }) {
   const diff = data.proposed.accuracy - data.baseline.accuracy;
+  const avail = data.dataAvailability;
 
   return (
     <div className="space-y-3 pt-2 border-t border-border-gray">
       <div className="text-xs font-semibold text-charcoal">
-        Preview: Last 7 Days ({data.totalGames} games)
+        Preview:{" "}
+        {data.startDate && data.endDate
+          ? `${formatShortDate(data.startDate)} \u2013 ${formatShortDate(data.endDate)}`
+          : `Last ${data.totalDays ?? 7} Days`}{" "}
+        ({data.totalGames} games)
       </div>
+
+      {/* Data availability */}
+      {avail && (
+        <div className="flex flex-wrap gap-1.5">
+          {DATA_SOURCES.map(({ key, label, unavailableReason }) => {
+            const available = avail[key];
+            return (
+              <span
+                key={key}
+                title={available ? `${label}: available` : unavailableReason}
+                className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                  available
+                    ? "bg-green-50 text-green-700"
+                    : "bg-gray-100 text-medium-gray"
+                }`}
+              >
+                <span>{available ? "\u2713" : "\u2013"}</span>
+                {label}
+              </span>
+            );
+          })}
+          {/* Odds gets special treatment -- partial availability */}
+          <span
+            title={
+              avail.odds
+                ? `Archived odds available for ${avail.oddsDaysAvailable}/${avail.oddsDaysTotal} days`
+                : "No archived odds data. Odds archiving starts from next cron run."
+            }
+            className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+              avail.odds
+                ? avail.oddsDaysAvailable === avail.oddsDaysTotal
+                  ? "bg-green-50 text-green-700"
+                  : "bg-amber-50 text-amber-700"
+                : "bg-gray-100 text-medium-gray"
+            }`}
+          >
+            <span>{avail.odds ? (avail.oddsDaysAvailable === avail.oddsDaysTotal ? "\u2713" : "~") : "\u2013"}</span>
+            Odds{avail.odds ? ` (${avail.oddsDaysAvailable}/${avail.oddsDaysTotal})` : ""}
+          </span>
+        </div>
+      )}
 
       {/* Summary bar */}
       <div className="flex items-center gap-4">

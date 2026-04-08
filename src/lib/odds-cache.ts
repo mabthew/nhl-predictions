@@ -2,6 +2,42 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./db";
 import { OddsResponse, FuturesOdds } from "./types";
 
+export async function saveOddsSnapshot(
+  date: string,
+  gameOdds: OddsResponse[],
+  futures: FuturesOdds[]
+): Promise<void> {
+  await prisma.oddsSnapshot.upsert({
+    where: { snapshotDate: date },
+    update: {
+      gameOdds: gameOdds as unknown as Prisma.InputJsonValue,
+      futures: futures as unknown as Prisma.InputJsonValue,
+    },
+    create: {
+      snapshotDate: date,
+      gameOdds: gameOdds as unknown as Prisma.InputJsonValue,
+      futures: futures as unknown as Prisma.InputJsonValue,
+    },
+  });
+}
+
+export async function loadOddsSnapshot(
+  date: string
+): Promise<{ gameOdds: OddsResponse[]; futures: FuturesOdds[] } | null> {
+  try {
+    const snapshot = await prisma.oddsSnapshot.findUnique({
+      where: { snapshotDate: date },
+    });
+    if (!snapshot) return null;
+    return {
+      gameOdds: snapshot.gameOdds as unknown as OddsResponse[],
+      futures: snapshot.futures as unknown as FuturesOdds[],
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function saveOddsToCache(
   gameOdds: OddsResponse[],
   playerProps: OddsResponse[],

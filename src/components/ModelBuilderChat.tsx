@@ -334,17 +334,31 @@ export default function ModelBuilderChat() {
           onSubmit={handleSubmit}
           className="flex gap-2 pt-3 border-t border-border-gray"
         >
-          <input
+          <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              // Auto-resize
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                if (input.trim() && !busy) {
+                  handleSubmit(e as unknown as React.FormEvent);
+                }
+              }
+            }}
             placeholder="Describe the model you want to build..."
-            className="flex-1 border border-border-gray rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-charcoal"
+            className="flex-1 border border-border-gray rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-charcoal resize-none overflow-y-auto"
+            rows={1}
             disabled={busy}
           />
           <button
             type="submit"
             disabled={busy || !input.trim()}
-            className="bg-charcoal text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-charcoal/90 disabled:opacity-50"
+            className="bg-charcoal text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-charcoal/90 disabled:opacity-50 self-end"
           >
             Send
           </button>

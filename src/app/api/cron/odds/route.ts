@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchGameOdds, fetchPlayerProps, fetchStanleyCupFutures } from "@/lib/odds-api";
-import { saveOddsToCache } from "@/lib/odds-cache";
+import { saveOddsToCache, saveOddsSnapshot } from "@/lib/odds-cache";
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
@@ -17,6 +17,9 @@ export async function GET(request: Request) {
     ]);
 
     await saveOddsToCache(gameOdds, playerProps, futures);
+
+    const today = new Date().toISOString().split("T")[0];
+    await saveOddsSnapshot(today, gameOdds, futures);
 
     return NextResponse.json({
       ok: true,

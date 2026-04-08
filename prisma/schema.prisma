@@ -83,6 +83,16 @@ model BuilderChat {
   @@index([updatedAt])
 }
 
+model OddsSnapshot {
+  id           Int      @id @default(autoincrement())
+  snapshotDate String   @unique
+  gameOdds     Json
+  futures      Json
+  createdAt    DateTime @default(now())
+
+  @@index([snapshotDate])
+}
+
 model EngagementEvent {
   id        Int      @id @default(autoincrement())
   event     String

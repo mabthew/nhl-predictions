@@ -16,7 +16,22 @@ interface ModelConfig {
   confidenceMultiplier: number;
 }
 
+interface DataAvailability {
+  futures: boolean;
+  rest: boolean;
+  starPower: boolean;
+  playerMomentum: boolean;
+  startingGoalies: boolean;
+  odds: boolean;
+  oddsDaysAvailable: number;
+  oddsDaysTotal: number;
+  playerProps: boolean;
+}
+
 interface PreviewResult {
+  startDate?: string;
+  endDate?: string;
+  totalDays?: number;
   totalGames: number;
   proposed: { correct: number; total: number; accuracy: number };
   baseline: { id: string; name: string; correct: number; total: number; accuracy: number };
@@ -32,6 +47,45 @@ interface PreviewResult {
     baselineCorrect: boolean;
     baselineConfidence: number;
   }>;
+  dataAvailability?: DataAvailability;
+}
+
+type RangePreset = "7d" | "14d" | "30d" | "season" | "last-season" | "custom";
+
+function getSeasonStart(date: Date): string {
+  const year = date.getMonth() >= 9 ? date.getFullYear() : date.getFullYear() - 1;
+  return `${year}-10-01`;
+}
+
+function getPresetDates(preset: RangePreset): { start: string; end: string; label: string } {
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 86400000).toISOString().split("T")[0];
+
+  if (preset === "season") {
+    return { start: getSeasonStart(today), end: yesterday, label: "This Season" };
+  }
+  if (preset === "last-season") {
+    const thisStart = new Date(getSeasonStart(today) + "T12:00:00");
+    const prevEnd = new Date(thisStart.getTime() - 86400000).toISOString().split("T")[0];
+    const prevYear = thisStart.getFullYear() - 1;
+    return { start: `${prevYear}-10-01`, end: prevEnd, label: "Last Season" };
+  }
+
+  const days = preset === "7d" ? 7 : preset === "14d" ? 14 : 30;
+  const start = new Date(today);
+  start.setDate(start.getDate() - days);
+  return { start: start.toISOString().split("T")[0], end: yesterday, label: `Last ${days} Days` };
+}
+
+function estimatePreview(startDate: string, endDate: string) {
+  const days = Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1);
+  const games = Math.round(days * 7);
+  // NHL API: 3 shared + schedule/day + prev-day-schedule/day + 32 clubStats + 32 profiles
+  const nhlCalls = 3 + days * 2 + 32 + 32;
+  const dfCalls = 32; // DailyFaceoff line combos per team
+  const secs = Math.max(3, Math.ceil(days * 0.5 + 5));
+  const duration = secs < 60 ? `~${secs}s` : `~${Math.ceil(secs / 60)}m`;
+  return { days, games, nhlCalls, dfCalls, duration };
 }
 
 const WEIGHT_NAMES: Record<string, string> = {
@@ -64,6 +118,9 @@ export default function ModelPreviewCard({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editName, setEditName] = useState(config.name);
+  const [rangePreset, setRangePreset] = useState<RangePreset>("7d");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
 
   const weightSum = Object.values(config.weights).reduce((a, b) => a + b, 0);
   const validSum = weightSum >= 0.95 && weightSum <= 1.05;
@@ -73,14 +130,26 @@ export default function ModelPreviewCard({
     .sort(([, a], [, b]) => b - a);
   const maxWeight = sorted[0]?.[1] ?? 1;
 
+  function getDateRange() {
+    if (rangePreset === "custom") {
+      return { startDate: customStart, endDate: customEnd };
+    }
+    const { start, end } = getPresetDates(rangePreset);
+    return { startDate: start, endDate: end };
+  }
+
+  const { startDate: selectedStart, endDate: selectedEnd } = getDateRange();
+  const est = selectedStart && selectedEnd ? estimatePreview(selectedStart, selectedEnd) : null;
+
   async function runPreview() {
     setLoading(true);
     setError(null);
     try {
+      const { startDate, endDate } = getDateRange();
       const res = await fetch("/api/admin/builder/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify({ ...config, startDate, endDate }),
       });
       if (!res.ok) {
         const body = await res.json();
@@ -194,22 +263,78 @@ export default function ModelPreviewCard({
         </span>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={runPreview}
-          disabled={loading || !validSum}
-          className="bg-charcoal text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-charcoal/90 disabled:opacity-50"
-        >
-          {loading ? "Running..." : "Preview vs Default"}
-        </button>
-        <button
-          onClick={saveModel}
-          disabled={saving || saved || !validSum}
-          className="bg-white border border-border-gray text-charcoal px-4 py-1.5 rounded-lg text-xs font-semibold hover:border-charcoal disabled:opacity-50"
-        >
-          {saved ? "Saved" : saving ? "Saving..." : "Save Model"}
-        </button>
+      {/* Preview range */}
+      <div className="space-y-2 pt-1">
+        <div className="flex flex-wrap gap-1">
+          {(["7d", "14d", "30d", "season", "last-season", "custom"] as RangePreset[]).map((p) => {
+            const labels: Record<RangePreset, string> = {
+              "7d": "7 Days",
+              "14d": "14 Days",
+              "30d": "30 Days",
+              season: "This Season",
+              "last-season": "Last Season",
+              custom: "Custom",
+            };
+            return (
+              <button
+                key={p}
+                onClick={() => setRangePreset(p)}
+                disabled={loading}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                  rangePreset === p
+                    ? "bg-charcoal text-white"
+                    : "bg-white border border-border-gray text-medium-gray hover:border-charcoal hover:text-charcoal"
+                }`}
+              >
+                {labels[p]}
+              </button>
+            );
+          })}
+        </div>
+
+        {rangePreset === "custom" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="border border-border-gray rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:border-charcoal"
+            />
+            <span className="text-xs text-medium-gray">to</span>
+            <input
+              type="date"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="border border-border-gray rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:border-charcoal"
+            />
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={runPreview}
+            disabled={loading || !validSum || (rangePreset === "custom" && (!customStart || !customEnd))}
+            className="bg-charcoal text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-charcoal/90 disabled:opacity-50"
+          >
+            {loading ? "Running..." : "Preview vs Default"}
+          </button>
+          {est && (
+            <div className="text-[10px] text-medium-gray space-y-0.5">
+              <div>~{est.games} games &middot; {est.duration} estimated</div>
+              <div>
+                <span className="text-green-600 font-medium">$0.00</span>
+                {" "}&mdash; NHL API: {est.nhlCalls} calls (free) &middot; DailyFaceoff: {est.dfCalls} calls (free) &middot; Odds API: 0 calls
+              </div>
+            </div>
+          )}
+          <button
+            onClick={saveModel}
+            disabled={saving || saved || !validSum}
+            className="bg-white border border-border-gray text-charcoal px-4 py-1.5 rounded-lg text-xs font-semibold hover:border-charcoal disabled:opacity-50"
+          >
+            {saved ? "Saved" : saving ? "Saving..." : "Save Model"}
+          </button>
+        </div>
       </div>
 
       {error && (
