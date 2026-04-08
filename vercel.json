@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/odds",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/history",
+      "schedule": "0 9 * * *"
     }
   ]
 }

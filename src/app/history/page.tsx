@@ -5,7 +5,6 @@ import HistoryCalendar from "@/components/HistoryCalendar";
 import Indicator from "@/components/Indicator";
 import ModelSwitcher from "@/components/ModelSwitcher";
 import {
-  syncHistoryBatch,
   getOverallStats,
   getAccuracyTimeline,
   HistoryDay,
@@ -27,16 +26,12 @@ export default async function HistoryPage({
   const selectedModelId = params.model ?? HISTORY_MODEL.id;
   const selectedModel = getModelConfig(selectedModelId) ?? HISTORY_MODEL;
   const modelVersion = selectedModel.id;
-  let remaining = 0;
   let stats = { totalGames: 0, winnerPct: 0, ouPct: 0, syncedDates: [] as string[] };
   let timeline: { date: string; winnerPct: number; ouPct: number; games: number }[] = [];
   const allDaysMap: Record<string, HistoryDay> = {};
   let dbAvailable = true;
 
   try {
-    const syncResult = await syncHistoryBatch();
-    remaining = syncResult.remaining;
-
     [stats, timeline] = await Promise.all([
       getOverallStats(modelVersion),
       getAccuracyTimeline(modelVersion),
