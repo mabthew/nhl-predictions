@@ -1,4 +1,4 @@
-import { streamText, tool, stepCountIs } from "ai";
+import { streamText, tool, stepCountIs, convertToModelMessages } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { logApiCall } from "@/lib/api-usage";
@@ -88,11 +88,12 @@ GUIDELINES:
 export async function POST(request: Request) {
   const { messages } = await request.json();
   const start = Date.now();
+  const modelMessages = await convertToModelMessages(messages);
 
   const result = streamText({
     model: anthropic("claude-sonnet-4-5"),
     system: SYSTEM_PROMPT,
-    messages,
+    messages: modelMessages,
     tools: {
       propose_model: tool({
         description:
