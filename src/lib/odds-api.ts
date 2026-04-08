@@ -1,5 +1,6 @@
 import { OddsResponse, PlayerPropPick, NHLClubStats, FuturesOdds } from "./types";
 import { americanToImpliedProbability, formatOdds } from "./utils";
+import { logApiCall } from "./api-usage";
 
 const ODDS_API_BASE = "https://api.the-odds-api.com/v4/sports";
 const SPORT = "icehockey_nhl";
@@ -26,9 +27,15 @@ async function oddsApiFetch(url: string, cacheDuration = 900): Promise<Response 
   let key = getActiveKey();
   if (!key) return null;
 
+  const endpoint = extractEndpoint(url);
+  const start = Date.now();
+
   const res = await fetch(url.replace("__API_KEY__", key), {
     next: { revalidate: cacheDuration },
   });
+
+  const elapsed = Date.now() - start;
+  logApiCall("odds-api", endpoint, res.status, elapsed).catch(() => {});
 
   // Check if free key is exhausted
   const remaining = res.headers.get("x-requests-remaining");
@@ -52,6 +59,15 @@ async function oddsApiFetch(url: string, cacheDuration = 900): Promise<Response 
 
   if (!res.ok) return null;
   return res;
+}
+
+function extractEndpoint(url: string): string {
+  try {
+    const u = new URL(url);
+    return u.pathname.replace(/\/v4\/sports\//, "");
+  } catch {
+    return url.slice(0, 80);
+  }
 }
 
 export async function fetchGameOdds(): Promise<OddsResponse[]> {

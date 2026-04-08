@@ -1,265 +1,348 @@
-import { MODEL_REGISTRY } from "@/lib/model-configs";
-import { getAccuracyByModel, getAccuracyTimeline } from "@/lib/history";
-import ModelComparison from "@/components/ModelComparison";
-import BackfillControls from "@/components/BackfillControls";
-import ModelAccuracyChart from "@/components/ModelAccuracyChart";
-import LogoutButton from "@/components/LogoutButton";
-import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { HISTORY_MODEL, MODEL_REGISTRY } from "@/lib/model-configs";
+import Link from "next/link";
 
 export const revalidate = 0;
 
-export default async function AdminPage() {
-  const session = await getSession();
+export default async function AdminOverview() {
+  const modelVersion = HISTORY_MODEL.id;
 
-  let modelAccuracy: Awaited<ReturnType<typeof getAccuracyByModel>> = [];
-  const chartModels: Array<{
-    modelId: string;
-    modelName: string;
-    data: Array<{ date: string; winnerPct: number; games: number }>;
-  }> = [];
+  let totalGames = 0;
+  let winnerCorrect = 0;
+  let ouCorrect = 0;
+  let todayGames = 0;
+  let todayCorrect = 0;
+  let recentDays: { date: string; games: number; winnerPct: number }[] = [];
+  let highConfidenceRecord = { correct: 0, total: 0 };
+  let apiCallsToday = 0;
+  let apiCallsMonth = 0;
+  let engagementToday = 0;
+
+  const today = new Date().toISOString().split("T")[0];
+  const monthStart = today.slice(0, 7) + "-01";
 
   try {
-    modelAccuracy = await getAccuracyByModel();
+    const [
+      allRecords,
+      todayRecords,
+      recentRecords,
+      apiToday,
+      apiMonth,
+      eventsToday,
+    ] = await Promise.all([
+      prisma.predictionRecord.findMany({
+        where: { gameId: { not: 0 }, modelVersion },
+        select: { winnerCorrect: true, ouCorrect: true, winnerConfidence: true },
+      }),
+      prisma.predictionRecord.findMany({
+        where: { gameDate: today, gameId: { not: 0 }, modelVersion },
+        select: { winnerCorrect: true },
+      }),
+      prisma.predictionRecord.findMany({
+        where: {
+          gameId: { not: 0 },
+          modelVersion,
+          gameDate: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .split("T")[0],
+          },
+        },
+        select: { gameDate: true, winnerCorrect: true },
+      }),
+      prisma.apiUsageLog.count({
+        where: { createdAt: { gte: new Date(today + "T00:00:00Z") } },
+      }),
+      prisma.apiUsageLog.count({
+        where: { createdAt: { gte: new Date(monthStart + "T00:00:00Z") } },
+      }),
+      prisma.engagementEvent.count({
+        where: { createdAt: { gte: new Date(today + "T00:00:00Z") } },
+      }),
+    ]);
 
-    // Fetch accuracy timelines for each model that has data
-    for (const ma of modelAccuracy) {
-      const timeline = await getAccuracyTimeline(ma.modelVersion);
-      const registryEntry = MODEL_REGISTRY.find((m) => m.id === ma.modelVersion);
-      chartModels.push({
-        modelId: ma.modelVersion,
-        modelName: registryEntry?.name ?? ma.modelVersion,
-        data: timeline,
-      });
+    totalGames = allRecords.length;
+    winnerCorrect = allRecords.filter((r) => r.winnerCorrect).length;
+    ouCorrect = allRecords.filter((r) => r.ouCorrect).length;
+
+    const highConf = allRecords.filter((r) => r.winnerConfidence >= 65);
+    highConfidenceRecord = {
+      correct: highConf.filter((r) => r.winnerCorrect).length,
+      total: highConf.length,
+    };
+
+    todayGames = todayRecords.length;
+    todayCorrect = todayRecords.filter((r) => r.winnerCorrect).length;
+
+    // Group recent by date
+    const byDate = new Map<string, { total: number; correct: number }>();
+    for (const r of recentRecords) {
+      const entry = byDate.get(r.gameDate) ?? { total: 0, correct: 0 };
+      entry.total++;
+      if (r.winnerCorrect) entry.correct++;
+      byDate.set(r.gameDate, entry);
     }
+    recentDays = Array.from(byDate.entries())
+      .map(([date, s]) => ({
+        date,
+        games: s.total,
+        winnerPct: Math.round((s.correct / s.total) * 100),
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    apiCallsToday = apiToday;
+    apiCallsMonth = apiMonth;
+    engagementToday = eventsToday;
   } catch {
     // DB may not be available
   }
 
-  const modelIds = MODEL_REGISTRY.map((m) => m.id);
+  const winnerPct =
+    totalGames > 0 ? Math.round((winnerCorrect / totalGames) * 100) : 0;
+  const ouPct =
+    totalGames > 0 ? Math.round((ouCorrect / totalGames) * 100) : 0;
+  const highConfPct =
+    highConfidenceRecord.total > 0
+      ? Math.round(
+          (highConfidenceRecord.correct / highConfidenceRecord.total) * 100
+        )
+      : 0;
 
   return (
-    <div className="min-h-screen bg-light-gray">
-      <header className="bg-charcoal text-white px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="font-teko text-3xl font-bold tracking-wide">
-            Model A/B Testing
-          </h1>
-          <p className="text-sm text-white/60 mt-1">
-            Compare prediction models, track accuracy, and manage backfills
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {session && (
-            <span className="text-xs text-white/50">{session.email}</span>
-          )}
-          <LogoutButton />
-        </div>
-      </header>
+    <div className="space-y-8">
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <SummaryCard
+          label="Season Record"
+          value={`${winnerCorrect}-${totalGames - winnerCorrect}`}
+          sub={`${winnerPct}% winner accuracy across ${totalGames} games`}
+        />
+        <SummaryCard
+          label="Over/Under"
+          value={`${ouPct}%`}
+          sub={`${ouCorrect} of ${totalGames} correct`}
+        />
+        <SummaryCard
+          label="High Confidence Picks"
+          value={`${highConfPct}%`}
+          sub={`${highConfidenceRecord.correct}/${highConfidenceRecord.total} games at 65%+ confidence`}
+        />
+        <SummaryCard
+          label="Active Model"
+          value={HISTORY_MODEL.id}
+          sub={HISTORY_MODEL.name}
+        />
+      </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-10">
-        {/* Section 1: Accuracy Overview */}
-        {modelAccuracy.length > 0 && (
-          <section>
-            <h2 className="font-teko text-2xl font-bold text-charcoal mb-4">
-              Accuracy Overview
-            </h2>
-            {modelAccuracy.length === 1 && (
-              <p className="text-sm text-medium-gray mb-4">
-                Only one model has backfilled data. Use the Backfill section below to
-                generate historical predictions for other models.
-              </p>
-            )}
-
-            {/* Accuracy cards */}
-            <div className="grid gap-4 md:grid-cols-3 mb-6">
-              {modelAccuracy.map((ma) => {
-                const registryEntry = MODEL_REGISTRY.find((m) => m.id === ma.modelVersion);
-                return (
-                  <div
-                    key={ma.modelVersion}
-                    className="bg-white border border-border-gray rounded-xl p-5"
-                  >
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-xs font-bold uppercase tracking-wide bg-charcoal text-white px-2 py-0.5 rounded">
-                        {ma.modelVersion}
-                      </span>
-                      {registryEntry && (
-                        <span className="text-sm font-medium text-charcoal">
-                          {registryEntry.name}
-                        </span>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <div>
-                        <div className="text-3xl font-bold text-charcoal">
-                          {ma.winnerPct}%
-                        </div>
-                        <div className="text-xs text-medium-gray">Winner Accuracy</div>
-                      </div>
-                      <div>
-                        <div className="text-xl font-bold text-charcoal">
-                          {ma.ouPct}%
-                        </div>
-                        <div className="text-xs text-medium-gray">Over/Under Accuracy</div>
-                      </div>
-                      <div className="text-xs text-medium-gray pt-2 border-t border-border-gray">
-                        {ma.totalGames} games across {ma.syncedDates} dates
-                      </div>
-                      {registryEntry && (
-                        <div className="flex flex-wrap gap-1 pt-1">
-                          {registryEntry.enableFutures && (
-                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                              Futures
-                            </span>
-                          )}
-                          {registryEntry.enableStarPower && (
-                            <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                              Star Power
-                            </span>
-                          )}
-                          <span className="text-[10px] bg-gray-100 text-medium-gray px-1.5 py-0.5 rounded">
-                            {Object.values(registryEntry.weights).filter((w) => w > 0).length} factors
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Accuracy chart */}
-            {chartModels.length > 0 && (
-              <div className="bg-white border border-border-gray rounded-xl p-5">
-                <h3 className="text-sm font-semibold text-charcoal mb-3">
-                  Winner Accuracy Over Time
-                </h3>
-                <ModelAccuracyChart models={chartModels} />
+      {/* Today + Quick Links */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Today's results */}
+        <div className="bg-white border border-border-gray rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-charcoal mb-3">Today</h3>
+          {todayGames > 0 ? (
+            <div>
+              <div className="text-3xl font-bold text-charcoal">
+                {todayCorrect}/{todayGames}
               </div>
-            )}
-          </section>
-        )}
-
-        {/* Section 2: Quick Compare */}
-        <section>
-          <h2 className="font-teko text-2xl font-bold text-charcoal mb-4">
-            Quick Compare
-          </h2>
-          <p className="text-sm text-medium-gray mb-4">
-            Run both models against completed games and compare predictions in real time.
-            No backfill needed — results are computed on the fly.
-          </p>
-          <ModelComparison modelIds={modelIds} />
-        </section>
-
-        {/* Section 3: Backfill */}
-        <section>
-          <h2 className="font-teko text-2xl font-bold text-charcoal mb-4">
-            Backfill
-          </h2>
-          <p className="text-sm text-medium-gray mb-4">
-            Generate historical predictions for a model version. Stores results in the
-            database for long-term accuracy tracking. Processes most recent dates first.
-          </p>
-          <BackfillControls modelIds={modelIds} />
-        </section>
-
-        {/* Section 4: Model Registry (collapsible) */}
-        <section>
-          <details className="group">
-            <summary className="font-teko text-2xl font-bold text-charcoal cursor-pointer flex items-center gap-2">
-              Model Registry
-              <svg
-                className="w-5 h-5 text-medium-gray transition-transform group-open:rotate-180"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </summary>
-            <div className="grid gap-4 md:grid-cols-2 mt-4">
-              {MODEL_REGISTRY.map((model) => (
-                <div
-                  key={model.id}
-                  className="bg-white border border-border-gray rounded-xl p-5 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wide bg-charcoal text-white px-2 py-0.5 rounded">
-                        {model.id}
-                      </span>
-                      <h3 className="text-lg font-semibold text-charcoal mt-1">
-                        {model.name}
-                      </h3>
-                    </div>
-                    <div className="text-right text-xs text-medium-gray">
-                      {model.enableFutures && (
-                        <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded mr-1">
-                          Futures
-                        </span>
-                      )}
-                      {model.enableStarPower && (
-                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                          Star Power
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-sm text-medium-gray">{model.description}</p>
-
-                  <div className="space-y-1.5">
-                    {Object.entries(model.weights)
-                      .sort(([, a], [, b]) => b - a)
-                      .map(([key, value]) => (
-                        <div key={key} className="flex items-center gap-2 text-xs">
-                          <span className="w-36 text-medium-gray truncate">
-                            {formatWeightName(key)}
-                          </span>
-                          <div className="flex-1 bg-light-gray rounded-full h-2 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-charcoal"
-                              style={{ width: `${Math.min(value * 500, 100)}%` }}
-                            />
-                          </div>
-                          <span className="w-10 text-right font-medium text-charcoal">
-                            {(value * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-
-                  <div className="flex gap-4 text-xs text-medium-gray pt-2 border-t border-border-gray">
-                    <span>
-                      Home Ice Bonus: <strong className="text-charcoal">+{model.homeIceBonus}</strong>
-                    </span>
-                    <span>
-                      Confidence Multiplier: <strong className="text-charcoal">{model.confidenceMultiplier}x</strong>
-                    </span>
-                  </div>
-                </div>
-              ))}
+              <div className="text-xs text-medium-gray mt-1">
+                {Math.round((todayCorrect / todayGames) * 100)}% winner accuracy
+              </div>
             </div>
-          </details>
+          ) : (
+            <div className="text-sm text-medium-gray">
+              No completed games tracked yet today
+            </div>
+          )}
+        </div>
+
+        {/* API Usage snapshot */}
+        <div className="bg-white border border-border-gray rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-charcoal mb-3">
+            API Usage
+          </h3>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-medium-gray">Today</span>
+              <span className="font-medium text-charcoal">
+                {apiCallsToday} calls
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-medium-gray">This month</span>
+              <span className="font-medium text-charcoal">
+                {apiCallsMonth} calls
+              </span>
+            </div>
+          </div>
+          <Link
+            href="/admin/costs"
+            className="text-xs text-accent-blue hover:underline mt-3 inline-block"
+          >
+            View cost details
+          </Link>
+        </div>
+
+        {/* Engagement snapshot */}
+        <div className="bg-white border border-border-gray rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-charcoal mb-3">
+            Engagement
+          </h3>
+          <div className="text-3xl font-bold text-charcoal">
+            {engagementToday}
+          </div>
+          <div className="text-xs text-medium-gray mt-1">events tracked today</div>
+          <Link
+            href="/admin/engagement"
+            className="text-xs text-accent-blue hover:underline mt-3 inline-block"
+          >
+            View engagement details
+          </Link>
+        </div>
+      </div>
+
+      {/* Last 7 days */}
+      {recentDays.length > 0 && (
+        <section>
+          <h2 className="font-teko text-2xl font-bold text-charcoal mb-4">
+            Last 7 Days
+          </h2>
+          <div className="bg-white border border-border-gray rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border-gray bg-light-gray">
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-medium-gray">
+                    Date
+                  </th>
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-medium-gray">
+                    Games
+                  </th>
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-medium-gray">
+                    Winner Accuracy
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-medium-gray">
+                    Result
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-gray/50">
+                {recentDays.map((day) => (
+                  <tr key={day.date}>
+                    <td className="px-4 py-2.5 font-medium text-charcoal">
+                      {formatDateLabel(day.date)}
+                    </td>
+                    <td className="px-4 py-2.5 text-center text-medium-gray">
+                      {day.games}
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span
+                        className={`font-semibold ${
+                          day.winnerPct >= 60
+                            ? "text-green-600"
+                            : day.winnerPct >= 50
+                              ? "text-charcoal"
+                              : "text-red-500"
+                        }`}
+                      >
+                        {day.winnerPct}%
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <AccuracyBar pct={day.winnerPct} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
-      </main>
+      )}
+
+      {/* Model quick info */}
+      <section>
+        <h2 className="font-teko text-2xl font-bold text-charcoal mb-4">
+          Models
+        </h2>
+        <div className="grid gap-3 md:grid-cols-3">
+          {MODEL_REGISTRY.map((model) => (
+            <div
+              key={model.id}
+              className="bg-white border border-border-gray rounded-xl p-4"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wide bg-charcoal text-white px-2 py-0.5 rounded">
+                  {model.id}
+                </span>
+                {model.id === HISTORY_MODEL.id && (
+                  <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+                    Active
+                  </span>
+                )}
+              </div>
+              <div className="text-sm font-medium text-charcoal">
+                {model.name}
+              </div>
+              <div className="text-xs text-medium-gray mt-1">
+                {Object.values(model.weights).filter((w) => w > 0).length}{" "}
+                factors
+              </div>
+            </div>
+          ))}
+        </div>
+        <Link
+          href="/admin/models"
+          className="text-xs text-accent-blue hover:underline mt-3 inline-block"
+        >
+          View model details and comparison tools
+        </Link>
+      </section>
     </div>
   );
 }
 
-function formatWeightName(key: string): string {
-  const names: Record<string, string> = {
-    goalDiffPerGame: "Goal Differential",
-    shotsForPerGame: "Shots For",
-    penaltyKillPct: "Penalty Kill",
-    powerPlayPct: "Power Play",
-    recentForm: "Recent Form",
-    irImpact: "Injury Impact",
-    goalie: "Goalie Quality",
-    futuresMarket: "Futures Market",
-    shotsAgainstPerGame: "Shots Against",
-    faceoffWinPct: "Faceoff Win",
-  };
-  return names[key] ?? key;
+function SummaryCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+}) {
+  return (
+    <div className="bg-white border border-border-gray rounded-xl p-5">
+      <div className="text-xs font-semibold text-medium-gray uppercase tracking-wide mb-2">
+        {label}
+      </div>
+      <div className="text-3xl font-bold text-charcoal">{value}</div>
+      <div className="text-xs text-medium-gray mt-1">{sub}</div>
+    </div>
+  );
+}
+
+function AccuracyBar({ pct }: { pct: number }) {
+  return (
+    <div className="inline-flex items-center gap-2">
+      <div className="w-16 bg-light-gray rounded-full h-2 overflow-hidden">
+        <div
+          className={`h-full rounded-full ${
+            pct >= 60
+              ? "bg-green-500"
+              : pct >= 50
+                ? "bg-charcoal"
+                : "bg-red-400"
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function formatDateLabel(dateStr: string) {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }

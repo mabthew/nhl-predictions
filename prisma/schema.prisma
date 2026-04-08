@@ -58,3 +58,29 @@ model AdminTotp {
   verified  Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model EngagementEvent {
+  id        Int      @id @default(autoincrement())
+  event     String
+  page      String
+  visitorId String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([event])
+  @@index([visitorId])
+}
+
+model ApiUsageLog {
+  id           Int      @id @default(autoincrement())
+  provider     String
+  endpoint     String
+  statusCode   Int
+  responseTime Int
+  costEstimate Float    @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([provider])
+}
