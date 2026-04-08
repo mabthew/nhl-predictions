@@ -1,4 +1,4 @@
-import { MODEL_REGISTRY } from "@/lib/model-configs";
+import { getAllModels } from "@/lib/model-configs";
 import { getAccuracyByModel, getAccuracyTimeline } from "@/lib/history";
 import ModelComparison from "@/components/ModelComparison";
 import BackfillControls from "@/components/BackfillControls";
@@ -14,12 +14,14 @@ export default async function ModelsPage() {
     data: Array<{ date: string; winnerPct: number; games: number }>;
   }> = [];
 
+  const allModels = await getAllModels();
+
   try {
     modelAccuracy = await getAccuracyByModel();
 
     for (const ma of modelAccuracy) {
       const timeline = await getAccuracyTimeline(ma.modelVersion);
-      const registryEntry = MODEL_REGISTRY.find((m) => m.id === ma.modelVersion);
+      const registryEntry = allModels.find((m) => m.id === ma.modelVersion);
       chartModels.push({
         modelId: ma.modelVersion,
         modelName: registryEntry?.name ?? ma.modelVersion,
@@ -30,7 +32,7 @@ export default async function ModelsPage() {
     // DB may not be available
   }
 
-  const modelIds = MODEL_REGISTRY.map((m) => m.id);
+  const modelIds = allModels.map((m) => m.id);
 
   return (
     <div className="space-y-10">
@@ -50,7 +52,7 @@ export default async function ModelsPage() {
           {/* Accuracy cards */}
           <div className="grid gap-4 md:grid-cols-3 mb-6">
             {modelAccuracy.map((ma) => {
-              const registryEntry = MODEL_REGISTRY.find((m) => m.id === ma.modelVersion);
+              const registryEntry = allModels.find((m) => m.id === ma.modelVersion);
               return (
                 <div
                   key={ma.modelVersion}
@@ -157,7 +159,7 @@ export default async function ModelsPage() {
             </svg>
           </summary>
           <div className="grid gap-4 md:grid-cols-2 mt-4">
-            {MODEL_REGISTRY.map((model) => (
+            {allModels.map((model) => (
               <div
                 key={model.id}
                 className="bg-white border border-border-gray rounded-xl p-5 space-y-3"

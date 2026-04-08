@@ -3,7 +3,7 @@ import { fetchSchedule, fetchStandings, fetchClubStats, fetchTeamStats } from "@
 import { fetchGameOdds, fetchPlayerProps } from "@/lib/odds-api";
 import { fetchInjuries } from "@/lib/injuries";
 import { generatePredictions } from "@/lib/predictor";
-import { getModelConfig, MODEL_REGISTRY } from "@/lib/model-configs";
+import { getModelConfig, getAllModels, getModelConfigAsync } from "@/lib/model-configs";
 import { NHLGame } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -37,10 +37,15 @@ export async function GET(request: NextRequest) {
   }
 
   const modelIds = (request.nextUrl.searchParams.get("models") ?? "v1,v2").split(",");
-  const models = modelIds.map((id) => getModelConfig(id.trim())).filter(Boolean);
+  const models = (
+    await Promise.all(
+      modelIds.map(async (id) => getModelConfig(id.trim()) ?? await getModelConfigAsync(id.trim()))
+    )
+  ).filter(Boolean);
   if (models.length === 0) {
+    const allModels = await getAllModels();
     return NextResponse.json(
-      { error: "No valid model IDs", available: MODEL_REGISTRY.map((m) => m.id) },
+      { error: "No valid model IDs", available: allModels.map((m) => m.id) },
       { status: 400 }
     );
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { syncHistoryBatch } from "@/lib/history";
-import { getModelConfig, MODEL_REGISTRY } from "@/lib/model-configs";
+import { getModelConfig, getAllModels, getModelConfigAsync } from "@/lib/model-configs";
 
 export const maxDuration = 300;
 
@@ -12,10 +12,11 @@ export async function POST(request: NextRequest) {
     const includeOdds = body.includeOdds === true;
     const force = body.force === true;
 
-    const modelConfig = getModelConfig(modelId);
+    const modelConfig = getModelConfig(modelId) ?? await getModelConfigAsync(modelId);
     if (!modelConfig) {
+      const allModels = await getAllModels();
       return NextResponse.json(
-        { error: `Unknown model: ${modelId}`, available: MODEL_REGISTRY.map((m) => m.id) },
+        { error: `Unknown model: ${modelId}`, available: allModels.map((m) => m.id) },
         { status: 400 }
       );
     }

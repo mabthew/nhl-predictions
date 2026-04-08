@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import { HISTORY_MODEL, MODEL_REGISTRY } from "@/lib/model-configs";
+import { HISTORY_MODEL, getAllModels } from "@/lib/model-configs";
+import type { ModelConfig } from "@/lib/types";
 import Link from "next/link";
 
 export const revalidate = 0;
@@ -17,6 +18,7 @@ export default async function AdminOverview() {
   let apiCallsToday = 0;
   let apiCallsMonth = 0;
   let engagementToday = 0;
+  let allModels: ModelConfig[] = [];
 
   const today = new Date().toISOString().split("T")[0];
   const monthStart = today.slice(0, 7) + "-01";
@@ -93,6 +95,7 @@ export default async function AdminOverview() {
     apiCallsToday = apiToday;
     apiCallsMonth = apiMonth;
     engagementToday = eventsToday;
+    allModels = await getAllModels();
   } catch {
     // DB may not be available
   }
@@ -263,7 +266,7 @@ export default async function AdminOverview() {
           Models
         </h2>
         <div className="grid gap-3 md:grid-cols-3">
-          {MODEL_REGISTRY.map((model) => (
+          {allModels.map((model) => (
             <div
               key={model.id}
               className="bg-white border border-border-gray rounded-xl p-4"

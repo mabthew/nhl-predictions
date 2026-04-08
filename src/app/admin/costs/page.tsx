@@ -43,6 +43,7 @@ const RANGE_OPTIONS = [
 const PROVIDER_COLORS: Record<string, string> = {
   "odds-api": "#3b82f6",
   "nhl-api": "#10b981",
+  "anthropic": "#d97706",
 };
 
 // Monthly subscriptions
@@ -54,6 +55,7 @@ const SUBSCRIPTIONS = [
     quota: 20000,
     provider: "odds-api",
   },
+  { name: "Anthropic", cost: 0, notes: "Pay-per-use, Claude Sonnet for model builder", quota: null, provider: "anthropic" },
   { name: "Vercel", cost: 0, notes: "Hobby plan, free tier", quota: null, provider: null },
   { name: "Neon Database", cost: 0, notes: "Free tier, 0.5 GB storage", quota: null, provider: null },
 ];

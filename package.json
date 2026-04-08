@@ -10,9 +10,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.68",
+    "@ai-sdk/react": "^3.0.155",
     "@prisma/client": "^6.19.2",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "ai": "^6.0.153",
     "jose": "^6.2.2",
     "next": "16.2.1",
     "otpauth": "^9.5.0",

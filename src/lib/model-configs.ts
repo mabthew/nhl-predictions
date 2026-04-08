@@ -105,3 +105,38 @@ export const MODEL_REGISTRY: ModelConfig[] = [MODEL_V1, MODEL_V2, MODEL_V3];
 export function getModelConfig(id: string): ModelConfig | undefined {
   return MODEL_REGISTRY.find((m) => m.id === id);
 }
+
+export async function getModelConfigAsync(
+  id: string
+): Promise<ModelConfig | undefined> {
+  const sync = MODEL_REGISTRY.find((m) => m.id === id);
+  if (sync) return sync;
+  const { prisma } = await import("./db");
+  const custom = await prisma.customModel.findUnique({ where: { id } });
+  if (!custom || !custom.isActive) return undefined;
+  const cfg = custom.config as Record<string, unknown>;
+  return {
+    ...(cfg as Omit<ModelConfig, "id" | "name" | "description">),
+    id: custom.id,
+    name: custom.name,
+    description: custom.description,
+  };
+}
+
+export async function getAllModels(): Promise<ModelConfig[]> {
+  const { prisma } = await import("./db");
+  const customModels = await prisma.customModel.findMany({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+  });
+  const dbConfigs: ModelConfig[] = customModels.map((m) => {
+    const cfg = m.config as Record<string, unknown>;
+    return {
+      ...(cfg as Omit<ModelConfig, "id" | "name" | "description">),
+      id: m.id,
+      name: m.name,
+      description: m.description,
+    };
+  });
+  return [...MODEL_REGISTRY, ...dbConfigs];
+}
