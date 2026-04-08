@@ -13,6 +13,7 @@
     "@ai-sdk/anthropic": "^3.0.68",
     "@ai-sdk/react": "^3.0.155",
     "@prisma/client": "^6.19.2",
+    "@tailwindcss/typography": "^0.5.19",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "ai": "^6.0.153",
@@ -22,6 +23,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1"
   },
   "devDependencies": {

@@ -3,6 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRef, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import ModelPreviewCard from "./ModelPreviewCard";
 
 const transport = new DefaultChatTransport({
@@ -80,9 +81,9 @@ export default function ModelBuilderChat() {
                     return (
                       <div
                         key={i}
-                        className="bg-white border border-border-gray rounded-xl rounded-bl-sm px-4 py-2.5 max-w-lg text-sm text-charcoal whitespace-pre-wrap"
+                        className="bg-white border border-border-gray rounded-xl rounded-bl-sm px-4 py-2.5 max-w-lg text-sm text-charcoal prose prose-sm prose-charcoal max-w-none"
                       >
-                        {part.text}
+                        <ReactMarkdown>{part.text}</ReactMarkdown>
                       </div>
                     );
                   }
