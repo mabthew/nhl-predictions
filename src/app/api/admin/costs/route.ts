@@ -65,6 +65,24 @@ export async function GET(request: NextRequest) {
         (a.date as string).localeCompare(b.date as string)
       );
 
+    // By user (Anthropic only)
+    const userCounts = new Map<string, { calls: number; cost: number }>();
+    for (const log of logs) {
+      if (log.provider === "anthropic" && log.createdBy) {
+        const stats = userCounts.get(log.createdBy) ?? { calls: 0, cost: 0 };
+        stats.calls++;
+        stats.cost += log.costEstimate;
+        userCounts.set(log.createdBy, stats);
+      }
+    }
+    const byUser = Array.from(userCounts.entries())
+      .map(([email, stats]) => ({
+        email,
+        calls: stats.calls,
+        totalCost: Math.round(stats.cost * 1000) / 1000,
+      }))
+      .sort((a, b) => b.calls - a.calls);
+
     // Top endpoints
     const endpointCounts = new Map<string, number>();
     for (const log of logs) {
@@ -82,6 +100,7 @@ export async function GET(request: NextRequest) {
       daily,
       topEndpoints,
       allProviders,
+      byUser,
     });
   } catch {
     return NextResponse.json(

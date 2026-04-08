@@ -12,7 +12,8 @@ export async function logApiCall(
   provider: string,
   endpoint: string,
   statusCode: number,
-  responseTime: number
+  responseTime: number,
+  createdBy?: string
 ): Promise<void> {
   const costEstimate = COST_PER_CALL[provider] ?? 0;
 
@@ -23,6 +24,7 @@ export async function logApiCall(
       statusCode,
       responseTime,
       costEstimate,
+      createdBy,
     },
   });
 }

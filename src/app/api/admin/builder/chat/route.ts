@@ -2,12 +2,13 @@ import { streamText, tool, stepCountIs, convertToModelMessages } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { logApiCall } from "@/lib/api-usage";
+import { getSession } from "@/lib/auth";
 import { MODEL_REGISTRY } from "@/lib/model-configs";
 
 export const maxDuration = 60;
 
 const modelConfigSchema = z.object({
-  name: z.string().describe("Short model name, e.g. 'Goalie-Heavy v1'"),
+  name: z.string().describe("Descriptive model name that reflects the model's philosophy, e.g. 'Defense-First Goalie v1' or 'Momentum-Heavy Streak Rider'"),
   description: z
     .string()
     .describe("One-sentence description of the model's philosophy"),
@@ -86,6 +87,7 @@ GUIDELINES:
 - Keep explanations concise and hockey-knowledgeable`;
 
 export async function POST(request: Request) {
+  const session = await getSession();
   const { messages } = await request.json();
   const start = Date.now();
   const modelMessages = await convertToModelMessages(messages);
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
     stopWhen: stepCountIs(2),
     onFinish: () => {
       const elapsed = Date.now() - start;
-      logApiCall("anthropic", "builder-chat", 200, elapsed).catch(() => {});
+      logApiCall("anthropic", "builder-chat", 200, elapsed, session?.email).catch(() => {});
     },
   });
 

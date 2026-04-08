@@ -24,6 +24,7 @@ interface CostData {
   daily: Array<Record<string, string | number>>;
   topEndpoints: Array<{ endpoint: string; count: number }>;
   allProviders: string[];
+  byUser: Array<{ email: string; calls: number; totalCost: number }>;
 }
 
 interface OddsUsage {
@@ -246,6 +247,37 @@ export default function CostsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Usage by user (Anthropic) */}
+          {data.byUser && data.byUser.length > 0 && (
+            <div className="bg-white border border-border-gray rounded-xl p-5">
+              <h3 className="text-sm font-semibold text-charcoal mb-4">
+                Anthropic Usage by User
+              </h3>
+              <div className="space-y-2">
+                {data.byUser.map((u) => (
+                  <div
+                    key={u.email}
+                    className="flex items-center justify-between text-sm py-2 border-b border-border-gray last:border-0"
+                  >
+                    <span className="text-charcoal font-medium text-xs">
+                      {u.email}
+                    </span>
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs text-medium-gray">
+                        {u.calls} {u.calls === 1 ? "call" : "calls"}
+                      </span>
+                      {u.totalCost > 0 && (
+                        <span className="text-xs font-medium text-amber-600">
+                          ${u.totalCost.toFixed(3)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

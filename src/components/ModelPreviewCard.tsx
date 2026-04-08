@@ -51,9 +51,11 @@ const WEIGHT_NAMES: Record<string, string> = {
 
 export default function ModelPreviewCard({
   config,
+  chatId,
   onSave,
 }: {
   config: ModelConfig;
+  chatId?: string;
   onSave?: () => void;
 }) {
   const [preview, setPreview] = useState<PreviewResult | null>(null);
@@ -61,6 +63,7 @@ export default function ModelPreviewCard({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editName, setEditName] = useState(config.name);
 
   const weightSum = Object.values(config.weights).reduce((a, b) => a + b, 0);
   const validSum = weightSum >= 0.95 && weightSum <= 1.05;
@@ -98,7 +101,7 @@ export default function ModelPreviewCard({
       const res = await fetch("/api/admin/builder/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify({ ...config, name: editName, chatId }),
       });
       if (!res.ok) {
         const body = await res.json();
@@ -116,10 +119,13 @@ export default function ModelPreviewCard({
   return (
     <div className="bg-light-gray border border-border-gray rounded-xl p-4 my-2 space-y-3">
       <div className="flex items-center justify-between">
-        <div>
-          <div className="font-semibold text-charcoal text-sm">
-            {config.name}
-          </div>
+        <div className="flex-1 min-w-0">
+          <input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            className="font-semibold text-charcoal text-sm bg-transparent border-b border-transparent hover:border-border-gray focus:border-charcoal focus:outline-none w-full"
+            disabled={saved}
+          />
           <div className="text-xs text-medium-gray">{config.description}</div>
         </div>
         <div

@@ -67,12 +67,16 @@ export async function POST(request: Request) {
       confidenceMultiplier: body.confidenceMultiplier ?? 3,
     };
 
+    const chatId =
+      typeof body.chatId === "string" && body.chatId ? body.chatId : undefined;
+
     const saved = await prisma.customModel.create({
       data: {
         name,
         description,
         config,
         createdBy: session.email,
+        chatId,
       },
     });
 

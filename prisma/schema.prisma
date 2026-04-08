@@ -65,9 +65,22 @@ model CustomModel {
   description String
   config      Json
   createdBy   String
+  chatId      String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model BuilderChat {
+  id        String   @id @default(cuid())
+  title     String
+  messages  Json
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdBy])
+  @@index([updatedAt])
 }
 
 model EngagementEvent {
@@ -90,6 +103,7 @@ model ApiUsageLog {
   statusCode   Int
   responseTime Int
   costEstimate Float    @default(0)
+  createdBy    String?
   createdAt    DateTime @default(now())
 
   @@index([createdAt])

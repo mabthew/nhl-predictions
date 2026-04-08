@@ -123,19 +123,30 @@ export async function getModelConfigAsync(
   };
 }
 
-export async function getAllModels(): Promise<ModelConfig[]> {
+export interface ModelWithMeta extends ModelConfig {
+  createdAt?: string;
+  createdBy?: string;
+  chatId?: string | null;
+  isCustom?: boolean;
+}
+
+export async function getAllModels(): Promise<ModelWithMeta[]> {
   const { prisma } = await import("./db");
   const customModels = await prisma.customModel.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "asc" },
   });
-  const dbConfigs: ModelConfig[] = customModels.map((m) => {
+  const dbConfigs: ModelWithMeta[] = customModels.map((m) => {
     const cfg = m.config as Record<string, unknown>;
     return {
       ...(cfg as Omit<ModelConfig, "id" | "name" | "description">),
       id: m.id,
       name: m.name,
       description: m.description,
+      createdAt: m.createdAt.toISOString(),
+      createdBy: m.createdBy,
+      chatId: m.chatId,
+      isCustom: true,
     };
   });
   return [...MODEL_REGISTRY, ...dbConfigs];

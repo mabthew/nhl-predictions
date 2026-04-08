@@ -1,4 +1,5 @@
-import { getAllModels } from "@/lib/model-configs";
+import { getAllModels, type ModelWithMeta } from "@/lib/model-configs";
+import Link from "next/link";
 import { getAccuracyByModel, getAccuracyTimeline } from "@/lib/history";
 import ModelComparison from "@/components/ModelComparison";
 import BackfillControls from "@/components/BackfillControls";
@@ -159,75 +160,120 @@ export default async function ModelsPage() {
             </svg>
           </summary>
           <div className="grid gap-4 md:grid-cols-2 mt-4">
-            {allModels.map((model) => (
-              <div
-                key={model.id}
-                className="bg-white border border-border-gray rounded-xl p-5 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xs font-bold uppercase tracking-wide bg-charcoal text-white px-2 py-0.5 rounded">
-                      {model.id}
-                    </span>
-                    <h3 className="text-lg font-semibold text-charcoal mt-1">
-                      {model.name}
-                    </h3>
-                  </div>
-                  <div className="text-right text-xs text-medium-gray">
-                    {model.enableFutures && (
-                      <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded mr-1">
-                        Futures
-                      </span>
-                    )}
-                    {model.enableStarPower && (
-                      <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                        Star Power
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <p className="text-sm text-medium-gray">{model.description}</p>
-
-                <div className="space-y-1.5">
-                  {(() => {
-                    const sorted = Object.entries(model.weights)
-                      .filter(([, v]) => v > 0)
-                      .sort(([, a], [, b]) => b - a);
-                    const maxWeight = sorted[0]?.[1] ?? 1;
-                    return sorted.map(([key, value]) => (
-                      <div key={key} className="flex items-center gap-2 text-xs">
-                        <span className="w-36 text-medium-gray truncate">
-                          {formatWeightName(key)}
+            {allModels.map((model) => {
+              const meta = model as ModelWithMeta;
+              return (
+                <div
+                  key={model.id}
+                  className="bg-white border border-border-gray rounded-xl p-5 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wide bg-charcoal text-white px-2 py-0.5 rounded">
+                          {model.id.length > 6 ? model.id.slice(0, 6) : model.id}
                         </span>
-                        <div className="flex-1 bg-light-gray rounded-full h-2 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-charcoal"
-                            style={{ width: `${(value / maxWeight) * 100}%` }}
-                          />
-                        </div>
-                        <span className="w-10 text-right font-medium text-charcoal">
-                          {(value * 100).toFixed(1)}%
-                        </span>
+                        {meta.isCustom && (
+                          <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                            Custom
+                          </span>
+                        )}
                       </div>
-                    ));
-                  })()}
-                </div>
+                      <h3 className="text-lg font-semibold text-charcoal mt-1">
+                        {model.name}
+                      </h3>
+                    </div>
+                    <div className="text-right text-xs text-medium-gray">
+                      {model.enableFutures && (
+                        <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded mr-1">
+                          Futures
+                        </span>
+                      )}
+                      {model.enableStarPower && (
+                        <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                          Star Power
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-medium-gray">{model.description}</p>
 
-                <div className="flex gap-4 text-xs text-medium-gray pt-2 border-t border-border-gray">
-                  <span>
-                    Home Ice Bonus: <strong className="text-charcoal">+{model.homeIceBonus}</strong>
-                  </span>
-                  <span>
-                    Confidence Multiplier: <strong className="text-charcoal">{model.confidenceMultiplier}x</strong>
-                  </span>
+                  <div className="space-y-1.5">
+                    {(() => {
+                      const sorted = Object.entries(model.weights)
+                        .filter(([, v]) => v > 0)
+                        .sort(([, a], [, b]) => b - a);
+                      const maxWeight = sorted[0]?.[1] ?? 1;
+                      return sorted.map(([key, value]) => (
+                        <div key={key} className="flex items-center gap-2 text-xs">
+                          <span className="w-36 text-medium-gray truncate">
+                            {formatWeightName(key)}
+                          </span>
+                          <div className="flex-1 bg-light-gray rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-charcoal"
+                              style={{ width: `${(value / maxWeight) * 100}%` }}
+                            />
+                          </div>
+                          <span className="w-10 text-right font-medium text-charcoal">
+                            {(value * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 text-xs text-medium-gray pt-2 border-t border-border-gray">
+                    <span>
+                      Home Ice Bonus: <strong className="text-charcoal">+{model.homeIceBonus}</strong>
+                    </span>
+                    <span>
+                      Confidence Multiplier: <strong className="text-charcoal">{model.confidenceMultiplier}x</strong>
+                    </span>
+                    {meta.createdAt && (
+                      <span>
+                        Created: <strong className="text-charcoal">{formatRelativeDate(meta.createdAt)}</strong>
+                      </span>
+                    )}
+                    {meta.createdBy && (
+                      <span>
+                        By: <strong className="text-charcoal">{meta.createdBy}</strong>
+                      </span>
+                    )}
+                  </div>
+                  {meta.chatId && (
+                    <div className="pt-1">
+                      <Link
+                        href={`/admin/builder?chat=${meta.chatId}`}
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        View Chat &rarr;
+                      </Link>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </details>
       </section>
     </div>
   );
+}
+
+function formatRelativeDate(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function formatWeightName(key: string): string {
