@@ -45,3 +45,7 @@ next-env.d.ts
 # sqlite database
 /data/
 .env*.local
+
+# agent orchestrator
+/worktrees/
+/scripts/logs/

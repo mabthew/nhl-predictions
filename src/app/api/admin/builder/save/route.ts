@@ -75,15 +75,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // Validate enabled feed slugs are active
+    // Validate enabled feed slugs exist (unknown = error, inactive = warning)
     const enabledFeeds: string[] = body.enabledFeeds ?? [];
+    let feedWarning: string | undefined;
     if (enabledFeeds.length > 0) {
-      const { valid, invalidSlugs } = await validateFeedSlugs(enabledFeeds);
+      const { valid, unknownSlugs, inactiveSlugs } = await validateFeedSlugs(enabledFeeds);
       if (!valid) {
         return NextResponse.json(
-          { error: `Inactive or unknown feeds: ${invalidSlugs.join(", ")}` },
+          { error: `Unknown feeds: ${unknownSlugs.join(", ")}` },
           { status: 400 }
         );
+      }
+      if (inactiveSlugs.length > 0) {
+        feedWarning = `Inactive feeds included: ${inactiveSlugs.join(", ")}. Their factors will use neutral scores until activated.`;
       }
     }
 
@@ -124,7 +128,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ id: saved.id, name: saved.name });
+    return NextResponse.json({ id: saved.id, name: saved.name, ...(feedWarning && { warning: feedWarning }) });
   } catch (error) {
     console.error("Save model error:", error);
     return NextResponse.json(

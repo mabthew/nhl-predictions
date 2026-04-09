@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.68",
     "@ai-sdk/react": "^3.0.155",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.97",
     "@prisma/client": "^6.19.2",
     "@tailwindcss/typography": "^0.5.19",
     "@vercel/analytics": "^2.0.1",

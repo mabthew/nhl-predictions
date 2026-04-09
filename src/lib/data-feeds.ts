@@ -254,21 +254,23 @@ export async function validateDynamicWeights(
 }
 
 /**
- * Validate that feed slugs are active.
+ * Validate feed slugs exist and check which are active vs inactive.
+ * Unknown slugs are errors; inactive slugs are warnings (saveable).
  */
 export async function validateFeedSlugs(
   slugs: string[]
-): Promise<{ valid: boolean; invalidSlugs: string[] }> {
-  if (slugs.length === 0) return { valid: true, invalidSlugs: [] };
+): Promise<{ valid: boolean; unknownSlugs: string[]; inactiveSlugs: string[] }> {
+  if (slugs.length === 0) return { valid: true, unknownSlugs: [], inactiveSlugs: [] };
 
   const feeds = await prisma.dataFeed.findMany({
-    where: { slug: { in: slugs }, isActive: true },
-    select: { slug: true },
+    where: { slug: { in: slugs } },
+    select: { slug: true, isActive: true },
   });
-  const activeSlugs = new Set(feeds.map((f) => f.slug));
-  const invalidSlugs = slugs.filter((s) => !activeSlugs.has(s));
+  const feedMap = new Map(feeds.map((f) => [f.slug, f.isActive]));
+  const unknownSlugs = slugs.filter((s) => !feedMap.has(s));
+  const inactiveSlugs = slugs.filter((s) => feedMap.has(s) && !feedMap.get(s));
 
-  return { valid: invalidSlugs.length === 0, invalidSlugs };
+  return { valid: unknownSlugs.length === 0, unknownSlugs, inactiveSlugs };
 }
 
 /**

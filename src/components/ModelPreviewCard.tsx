@@ -118,6 +118,7 @@ export default function ModelPreviewCard({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveWarning, setSaveWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editName, setEditName] = useState(config.name);
   const [rangePreset, setRangePreset] = useState<RangePreset>("7d");
@@ -182,6 +183,7 @@ export default function ModelPreviewCard({
   async function saveModel() {
     setSaving(true);
     setError(null);
+    setSaveWarning(null);
     try {
       const res = await fetch("/api/admin/builder/save", {
         method: "POST",
@@ -191,6 +193,10 @@ export default function ModelPreviewCard({
       if (!res.ok) {
         const body = await res.json();
         throw new Error(body.error ?? "Save failed");
+      }
+      const body = await res.json();
+      if (body.warning) {
+        setSaveWarning(body.warning);
       }
       setSaved(true);
       onSave?.();
@@ -387,6 +393,12 @@ export default function ModelPreviewCard({
       {error && (
         <div className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {saveWarning && (
+        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+          {saveWarning}
         </div>
       )}
 
