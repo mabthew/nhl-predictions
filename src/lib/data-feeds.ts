@@ -4,9 +4,9 @@ import { logApiCall } from "./api-usage";
 import { clamp } from "./utils";
 
 // Guard rail thresholds (USD)
-const DAILY_COST_WARNING = 1.0;
-const DAILY_COST_HARD_LIMIT = 5.0;
-const TEAMS_PER_DAY = 32;
+export const DAILY_COST_WARNING = 1.0;
+export const DAILY_COST_HARD_LIMIT = 5.0;
+export const TEAMS_PER_DAY = 32;
 
 export interface FeedMetadata {
   slug: string;

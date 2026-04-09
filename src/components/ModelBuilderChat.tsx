@@ -326,39 +326,7 @@ export default function ModelBuilderChat() {
                           </div>
                           <div className="space-y-2">
                             {feeds.map((f) => (
-                              <div
-                                key={f.slug}
-                                className="bg-white rounded-lg p-2 text-xs"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <span className="font-semibold text-charcoal">
-                                    {f.name}
-                                  </span>
-                                  <span
-                                    className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                      f.isActive
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-gray-100 text-medium-gray"
-                                    }`}
-                                  >
-                                    {f.isActive ? "Active" : "Inactive"}
-                                  </span>
-                                </div>
-                                <div className="text-medium-gray mt-0.5">
-                                  {f.description}
-                                </div>
-                                <div className="flex gap-3 mt-1 text-[10px]">
-                                  <span className="text-amber-700">
-                                    Factor: {f.factorLabel}
-                                  </span>
-                                  <span className="text-amber-700">
-                                    ${f.costPerCall}/call
-                                  </span>
-                                  <span className="text-amber-700">
-                                    ~${f.dailyCost.toFixed(2)}/day
-                                  </span>
-                                </div>
-                              </div>
+                              <FeedCard key={f.slug} {...f} />
                             ))}
                           </div>
                         </div>
@@ -427,6 +395,122 @@ export default function ModelBuilderChat() {
             Send
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+interface FeedCardProps {
+  slug: string;
+  name: string;
+  description: string;
+  factorKey: string;
+  factorLabel: string;
+  costPerCall: number;
+  dailyCost: number;
+  isActive: boolean;
+}
+
+function FeedCard({
+  slug,
+  name,
+  description,
+  factorLabel,
+  costPerCall,
+  dailyCost,
+  isActive,
+}: FeedCardProps) {
+  const [currentActive, setCurrentActive] = useState(isActive);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [successNote, setSuccessNote] = useState<string | null>(null);
+
+  async function handleToggle() {
+    setLoading(true);
+    setError(null);
+    setWarning(null);
+    setSuccessNote(null);
+
+    try {
+      const res = await fetch(`/api/admin/feeds/${slug}/activate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !currentActive }),
+      });
+
+      const body = await res.json();
+
+      if (!res.ok) {
+        setError(body.error ?? "Activation failed");
+        return;
+      }
+
+      setCurrentActive(body.isActive);
+
+      if (body.warning) {
+        setWarning(body.warning);
+      }
+
+      if (body.isActive) {
+        setSuccessNote(
+          "Data will be available after the next scheduled feed run."
+        );
+      }
+    } catch {
+      setError("Network error. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-lg p-2 text-xs">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-semibold text-charcoal">{name}</span>
+        <button
+          onClick={handleToggle}
+          disabled={loading}
+          aria-label={
+            loading
+              ? `Toggling ${name}`
+              : currentActive
+                ? `Deactivate ${name}`
+                : `Activate ${name}`
+          }
+          className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+            loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+          } ${
+            currentActive
+              ? "bg-green-100 text-green-700 hover:bg-green-200"
+              : "bg-charcoal text-white hover:bg-charcoal/80"
+          }`}
+        >
+          {loading ? "..." : currentActive ? "Active" : "Activate"}
+        </button>
+      </div>
+      <div className="text-medium-gray mt-0.5">{description}</div>
+      <div className="flex flex-wrap gap-3 mt-1 text-[10px]">
+        <span className="text-amber-700">Factor: {factorLabel}</span>
+        <span className="text-amber-700">${costPerCall}/call</span>
+        <span className="text-amber-700">~${dailyCost.toFixed(2)}/day</span>
+      </div>
+      <div role="status" aria-live="polite">
+        {error && (
+          <div className="mt-1.5 text-[10px] text-red-600 bg-red-50 px-2 py-1 rounded">
+            {error}
+          </div>
+        )}
+        {warning && (
+          <div className="mt-1.5 text-[10px] text-amber-700 bg-amber-50 px-2 py-1 rounded">
+            {warning}
+          </div>
+        )}
+        {successNote && !error && (
+          <div className="mt-1.5 text-[10px] text-green-700 bg-green-50 px-2 py-1 rounded">
+            {successNote}
+          </div>
+        )}
       </div>
     </div>
   );
