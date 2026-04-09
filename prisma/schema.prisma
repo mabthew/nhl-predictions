@@ -35,12 +35,33 @@ model PredictionRecord {
   propPick         String?
   homeGoalsPerGame Float?
   awayGoalsPerGame Float?
+  closingMoneylineHome Int?
+  closingMoneylineAway Int?
+  closingTotal Float?
   modelVersion     String   @default("v2")
   createdAt        DateTime @default(now())
 
   @@unique([gameId, gameDate, modelVersion])
   @@index([gameDate])
   @@index([modelVersion])
+}
+
+model HistoricalOddsImport {
+  id             Int      @id @default(autoincrement())
+  startDate      String
+  endDate        String
+  status         String   @default("pending")
+  totalDates     Int      @default(0)
+  datesCompleted Int      @default(0)
+  datesFailed    Int      @default(0)
+  datesSkipped   Int      @default(0)
+  apiCalls       Int      @default(0)
+  estimatedCost  Float    @default(0)
+  error          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
 }
 
 model OddsCache {
