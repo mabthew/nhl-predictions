@@ -61,21 +61,35 @@ const SUBSCRIPTIONS = [
   { name: "Neon Database", cost: 0, notes: "Free tier, 0.5 GB storage", quota: null, provider: null },
 ];
 
+interface FeedKeyStatus {
+  slug: string;
+  name: string;
+  provider: string;
+  authEnvVar: string | null;
+  keySetupUrl: string | null;
+  costPerCall: number;
+  isActive: boolean;
+  hasKey: boolean;
+}
+
 export default function CostsPage() {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<CostData | null>(null);
   const [oddsUsage, setOddsUsage] = useState<OddsUsage | null>(null);
+  const [feedKeys, setFeedKeys] = useState<FeedKeyStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [costsRes, usageRes] = await Promise.all([
+      const [costsRes, usageRes, feedsRes] = await Promise.all([
         fetch(`/api/admin/costs?days=${days}`),
         fetch("/api/admin/odds-usage"),
+        fetch("/api/admin/feeds/keys"),
       ]);
       if (costsRes.ok) setData(await costsRes.json());
       if (usageRes.ok) setOddsUsage(await usageRes.json());
+      if (feedsRes.ok) setFeedKeys(await feedsRes.json());
     } catch {
       // ignore
     } finally {
@@ -199,6 +213,31 @@ export default function CostsPage() {
           })}
         </div>
       </div>
+
+      {/* Paid Feed Keys */}
+      {feedKeys.length > 0 && (
+        <div className="bg-white border border-border-gray rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-charcoal mb-1">
+            Paid Data Feed Keys
+          </h3>
+          <p className="text-xs text-medium-gray mb-4">
+            API keys for external data feeds used in custom models
+          </p>
+          <div className="space-y-0">
+            {feedKeys.map((feed) => (
+              <FeedKeyRow
+                key={feed.slug}
+                feed={feed}
+                onUpdate={(updated) => {
+                  setFeedKeys((prev) =>
+                    prev.map((f) => (f.slug === updated.slug ? { ...f, ...updated } : f))
+                  );
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading && !data && (
         <div className="text-sm text-medium-gray animate-pulse">Loading...</div>
@@ -377,6 +416,144 @@ export default function CostsPage() {
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+function FeedKeyRow({
+  feed,
+  onUpdate,
+}: {
+  feed: FeedKeyStatus;
+  onUpdate: (updated: Partial<FeedKeyStatus> & { slug: string }) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const dailyCost = feed.costPerCall * 32;
+
+  async function handleSave() {
+    if (!apiKey.trim()) return;
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/feeds/${feed.slug}/key`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error ?? "Failed to save key");
+        return;
+      }
+      setSuccess(body.vercelSynced ? "Saved and synced to Vercel" : "Saved to database");
+      setEditing(false);
+      setApiKey("");
+      onUpdate({ slug: feed.slug, hasKey: true });
+    } catch {
+      setError("Network error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // No key required for this feed
+  if (!feed.authEnvVar) {
+    return (
+      <div className="flex items-center justify-between py-3 border-t border-border-gray first:border-0 first:pt-0">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-charcoal">{feed.name}</span>
+          <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+            No key required
+          </span>
+          {feed.isActive && (
+            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+              Active
+            </span>
+          )}
+        </div>
+        <span className="text-xs text-medium-gray">
+          {feed.costPerCall === 0 ? "Free" : `~$${dailyCost.toFixed(2)}/day`}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="py-3 border-t border-border-gray first:border-0 first:pt-0 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-charcoal">{feed.name}</span>
+          {feed.hasKey ? (
+            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+              Key configured
+            </span>
+          ) : (
+            <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
+              Key missing
+            </span>
+          )}
+          {feed.isActive && (
+            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+              Active
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-medium-gray">
+            ~${dailyCost.toFixed(2)}/day
+          </span>
+          <button
+            onClick={() => { setEditing(!editing); setError(null); setSuccess(null); }}
+            className="text-xs text-accent-blue hover:underline cursor-pointer"
+          >
+            {editing ? "Cancel" : feed.hasKey ? "Update key" : "Add key"}
+          </button>
+        </div>
+      </div>
+
+      {editing && (
+        <div className="flex items-center gap-2">
+          <code className="text-[10px] text-medium-gray shrink-0">{feed.authEnvVar}</code>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="Paste API key"
+            className="flex-1 text-xs border border-border-gray rounded-lg px-3 py-1.5 bg-light-gray focus:outline-none focus:border-charcoal font-mono"
+            onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+          />
+          <button
+            onClick={handleSave}
+            disabled={saving || !apiKey.trim()}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-charcoal text-white hover:bg-charcoal/90 disabled:opacity-50 cursor-pointer transition-colors"
+          >
+            {saving ? "..." : "Save"}
+          </button>
+          {feed.keySetupUrl && (
+            <a
+              href={feed.keySetupUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-accent-blue hover:underline whitespace-nowrap"
+            >
+              Get a key
+            </a>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg">{error}</div>
+      )}
+      {success && (
+        <div className="text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-lg">{success}</div>
       )}
     </div>
   );
