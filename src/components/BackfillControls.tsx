@@ -16,8 +16,10 @@ interface BackfillStatus {
 
 export default function BackfillControls({
   modelIds,
+  modelNames,
 }: {
   modelIds: string[];
+  modelNames: Record<string, string>;
 }) {
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
     new Set([modelIds[1] ?? modelIds[0] ?? "v2"])
@@ -127,59 +129,74 @@ export default function BackfillControls({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-4">
-        <div>
+        <div className="flex-1 min-w-0">
           <label className="block text-sm font-semibold text-charcoal mb-1.5">Models</label>
-          <div className="flex flex-wrap gap-1.5">
-            {modelIds.map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => toggleModel(id)}
-                disabled={loading}
-                className={`px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wide transition-colors disabled:opacity-50 ${
-                  selectedModels.has(id)
-                    ? "bg-charcoal text-white"
-                    : "bg-light-gray text-medium-gray hover:bg-border-gray"
-                }`}
-              >
-                {id}
-              </button>
-            ))}
+          <div className="space-y-1">
+            {modelIds.map((id) => {
+              const name = modelNames[id] ?? id;
+              const isBuiltIn = id.length <= 4;
+              return (
+                <label
+                  key={id}
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg cursor-pointer transition-colors ${
+                    selectedModels.has(id)
+                      ? "bg-charcoal/5"
+                      : "hover:bg-light-gray"
+                  } ${loading ? "opacity-50 pointer-events-none" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedModels.has(id)}
+                    onChange={() => toggleModel(id)}
+                    disabled={loading}
+                    className="rounded border-border-gray"
+                  />
+                  <span className="text-xs font-medium text-charcoal">{name}</span>
+                  {isBuiltIn ? (
+                    <span className="text-[10px] text-medium-gray uppercase">{id}</span>
+                  ) : (
+                    <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">Custom</span>
+                  )}
+                </label>
+              );
+            })}
           </div>
         </div>
 
-        <label className="flex items-center gap-2 pb-0.5 cursor-pointer group/odds relative">
-          <input
-            type="checkbox"
-            checked={includeOdds}
-            onChange={(e) => setIncludeOdds(e.target.checked)}
-            disabled={loading}
-            className="rounded border-border-gray"
-          />
-          <span className="text-xs text-medium-gray">
-            Include Odds <span className="text-[10px]">(uses API quota)</span>
-          </span>
-          <span className="invisible group-hover/odds:visible absolute left-0 top-full mt-1 z-10 bg-charcoal text-white text-[11px] px-3 py-2 rounded-lg shadow-lg max-w-64 leading-relaxed">
-            Fetches live odds from the Odds API (2 calls per batch). V2 and V3 use odds as 5% of composite score. V1 does not use odds.
-          </span>
-        </label>
+        <div className="flex flex-col gap-3 pb-1">
+          <label className="flex items-center gap-2 cursor-pointer group/odds relative">
+            <input
+              type="checkbox"
+              checked={includeOdds}
+              onChange={(e) => setIncludeOdds(e.target.checked)}
+              disabled={loading}
+              className="rounded border-border-gray"
+            />
+            <span className="text-xs text-medium-gray">
+              Include Odds <span className="text-[10px]">(uses API quota)</span>
+            </span>
+            <span className="invisible group-hover/odds:visible absolute left-0 top-full mt-1 z-10 bg-charcoal text-white text-[11px] px-3 py-2 rounded-lg shadow-lg max-w-64 leading-relaxed">
+              Fetches live odds from the Odds API (2 calls per batch). V2 and V3 use odds as 5% of composite score. V1 does not use odds.
+            </span>
+          </label>
 
-        {loading ? (
-          <button
-            onClick={() => { stopRef.current = true; }}
-            className="bg-espn-red text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-espn-red-dark"
-          >
-            Stop After Current Batch
-          </button>
-        ) : (
-          <button
-            onClick={runAllBatches}
-            disabled={selectedModels.size === 0}
-            className="bg-charcoal text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-charcoal/90 disabled:opacity-50"
-          >
-            {selectedModels.size === 0 ? "Select Models" : `Run All (${selectedModels.size})`}
-          </button>
-        )}
+          {loading ? (
+            <button
+              onClick={() => { stopRef.current = true; }}
+              className="bg-espn-red text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-espn-red-dark"
+            >
+              Stop After Current Batch
+            </button>
+          ) : (
+            <button
+              onClick={runAllBatches}
+              disabled={selectedModels.size === 0}
+              className="bg-charcoal text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-charcoal/90 disabled:opacity-50"
+            >
+              {selectedModels.size === 0 ? "Select Models" : `Run Backfill (${selectedModels.size} model${selectedModels.size > 1 ? "s" : ""})`}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Progress */}
@@ -197,18 +214,18 @@ export default function BackfillControls({
             <span>
               {done && !loading ? (
                 <span className="text-green-600 font-medium">
-                  Complete — {synced} of {totalDates} dates synced for {displayModel} ({syncedGames} games)
+                  Complete — {synced} of {totalDates} dates synced for {modelNames[displayModel] ?? displayModel} ({syncedGames} games)
                 </span>
               ) : loading ? (
                 <span className="animate-pulse">
-                  {activeModel}: batch {batchNum}... {remaining} dates remaining
+                  {modelNames[activeModel] ?? activeModel}: batch {batchNum}... {remaining} dates remaining
                 </span>
               ) : remaining === 0 && displayModel ? (
                 <span className="text-green-600 font-medium">
-                  Fully synced — {synced} of {totalDates} dates for {displayModel} ({syncedGames} games)
+                  Fully synced — {synced} of {totalDates} dates for {modelNames[displayModel] ?? displayModel} ({syncedGames} games)
                 </span>
               ) : displayModel ? (
-                <span>{synced} of {totalDates} dates synced for {displayModel} — {remaining} remaining</span>
+                <span>{synced} of {totalDates} dates synced for {modelNames[displayModel] ?? displayModel} — {remaining} remaining</span>
               ) : (
                 <span>Select models to backfill</span>
               )}

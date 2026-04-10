@@ -4,6 +4,7 @@ import { getAccuracyByModel, getAccuracyTimeline } from "@/lib/history";
 import ModelComparison from "@/components/ModelComparison";
 import BackfillControls from "@/components/BackfillControls";
 import ModelAccuracyChart from "@/components/ModelAccuracyChart";
+import DeleteModelButton from "@/components/DeleteModelButton";
 
 export const revalidate = 0;
 
@@ -34,6 +35,10 @@ export default async function ModelsPage() {
   }
 
   const modelIds = allModels.map((m) => m.id);
+  const modelNames: Record<string, string> = {};
+  for (const m of allModels) {
+    modelNames[m.id] = m.name;
+  }
 
   return (
     <div className="space-y-10">
@@ -141,7 +146,7 @@ export default async function ModelsPage() {
           Generate historical predictions for a model version. Stores results in the
           database for long-term accuracy tracking. Processes most recent dates first.
         </p>
-        <BackfillControls modelIds={modelIds} />
+        <BackfillControls modelIds={modelIds} modelNames={modelNames} />
       </section>
 
       {/* Section 4: Model Registry (collapsible) */}
@@ -266,14 +271,19 @@ export default async function ModelsPage() {
                       </span>
                     )}
                   </div>
-                  {meta.chatId && (
-                    <div className="pt-1">
-                      <Link
-                        href={`/admin/builder?chat=${meta.chatId}`}
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        View Chat &rarr;
-                      </Link>
+                  {(meta.chatId || meta.isCustom) && (
+                    <div className="flex items-center justify-between pt-1">
+                      {meta.chatId ? (
+                        <Link
+                          href={`/admin/builder?chat=${meta.chatId}`}
+                          className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          View Chat &rarr;
+                        </Link>
+                      ) : <span />}
+                      {meta.isCustom && (
+                        <DeleteModelButton modelId={model.id} modelName={model.name} />
+                      )}
                     </div>
                   )}
                 </div>
