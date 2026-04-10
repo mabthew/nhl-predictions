@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { validateDynamicWeights, validateFeedSlugs, validateFeedCosts } from "@/lib/data-feeds";
+import { hasSecret } from "@/lib/secrets";
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -78,7 +79,14 @@ export async function POST(request: Request) {
     // Validate enabled feed slugs exist (unknown = error, inactive = warning)
     const enabledFeeds: string[] = body.enabledFeeds ?? [];
     let feedWarning: string | undefined;
-    let inactiveFeedSlugs: string[] = [];
+    let inactiveFeeds: Array<{
+      slug: string;
+      name: string;
+      costPerCall: number;
+      authEnvVar: string | null;
+      hasKey: boolean;
+      keySetupUrl: string | null;
+    }> = [];
     if (enabledFeeds.length > 0) {
       const { valid, unknownSlugs, inactiveSlugs } = await validateFeedSlugs(enabledFeeds);
       if (!valid) {
@@ -88,8 +96,23 @@ export async function POST(request: Request) {
         );
       }
       if (inactiveSlugs.length > 0) {
-        inactiveFeedSlugs = inactiveSlugs;
-        feedWarning = `Inactive feeds included: ${inactiveSlugs.join(", ")}. Their factors will use neutral scores until activated.`;
+        feedWarning = "inactive_feeds";
+        const feedRows = await prisma.dataFeed.findMany({
+          where: { slug: { in: inactiveSlugs } },
+          select: { slug: true, name: true, costPerCall: true, authEnvVar: true, keySetupUrl: true },
+        });
+        inactiveFeeds = await Promise.all(
+          feedRows.map(async (f) => ({
+            slug: f.slug,
+            name: f.name,
+            costPerCall: f.costPerCall,
+            authEnvVar: f.authEnvVar,
+            hasKey: f.authEnvVar
+              ? !!(process.env[f.authEnvVar] || await hasSecret(f.authEnvVar))
+              : true,
+            keySetupUrl: f.keySetupUrl,
+          }))
+        );
       }
     }
 
@@ -133,7 +156,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: saved.id,
       name: saved.name,
-      ...(feedWarning && { warning: feedWarning, inactiveSlugs: inactiveFeedSlugs }),
+      ...(feedWarning && { warning: feedWarning, inactiveFeeds }),
     });
   } catch (error) {
     console.error("Save model error:", error);

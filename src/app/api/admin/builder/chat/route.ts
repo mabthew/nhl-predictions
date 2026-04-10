@@ -149,6 +149,8 @@ export async function POST(request: Request) {
             costPerCall: f.costPerCall,
             dailyCost: Math.round(f.costPerCall * 32 * 100) / 100,
             isActive: f.isActive,
+            authEnvVar: f.authEnvVar,
+            keySetupUrl: f.keySetupUrl,
           }));
         },
       }),

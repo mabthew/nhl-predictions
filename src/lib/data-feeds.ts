@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { zScoreNormalize } from "./predictor";
 import { logApiCall } from "./api-usage";
+import { getSecret } from "./secrets";
 import { clamp } from "./utils";
 
 // Guard rail thresholds (USD)
@@ -299,7 +300,9 @@ export async function fetchAndCacheFeedData(
     }
   }
 
-  const apiKey = feed.authEnvVar ? process.env[feed.authEnvVar] : null;
+  const apiKey = feed.authEnvVar
+    ? (process.env[feed.authEnvVar] || await getSecret(feed.authEnvVar))
+    : null;
 
   for (const abbrev of teamAbbrevs) {
     const start = Date.now();

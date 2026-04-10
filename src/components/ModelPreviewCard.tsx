@@ -119,7 +119,7 @@ export default function ModelPreviewCard({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveWarning, setSaveWarning] = useState<string | null>(null);
-  const [inactiveSlugs, setInactiveSlugs] = useState<string[]>([]);
+  const [inactiveFeeds, setInactiveFeeds] = useState<InactiveFeed[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [editName, setEditName] = useState(config.name);
   const [rangePreset, setRangePreset] = useState<RangePreset>("7d");
@@ -198,7 +198,7 @@ export default function ModelPreviewCard({
       const body = await res.json();
       if (body.warning) {
         setSaveWarning(body.warning);
-        setInactiveSlugs(body.inactiveSlugs ?? []);
+        setInactiveFeeds(body.inactiveFeeds ?? []);
       }
       setSaved(true);
       onSave?.();
@@ -399,15 +399,23 @@ export default function ModelPreviewCard({
       )}
 
       {saveWarning && (
-        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg space-y-2">
-          <p>Inactive feeds included. Their factors will use neutral scores until activated.</p>
-          {inactiveSlugs.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {inactiveSlugs.map((slug) => (
-                <InlineActivateButton key={slug} slug={slug} onActivated={(s) => {
-                  setInactiveSlugs((prev) => prev.filter((x) => x !== s));
-                  if (inactiveSlugs.length <= 1) setSaveWarning(null);
-                }} />
+        <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 space-y-2">
+          <div className="text-amber-800 font-medium">Inactive feeds included</div>
+          <p className="text-amber-700">
+            These feeds will use neutral scores until activated.
+            Once active, data will be available after the next scheduled feed run.
+          </p>
+          {inactiveFeeds.length > 0 && (
+            <div className="space-y-1.5">
+              {inactiveFeeds.map((feed) => (
+                <InlineActivateButton
+                  key={feed.slug}
+                  feed={feed}
+                  onActivated={(s) => {
+                    setInactiveFeeds((prev) => prev.filter((f) => f.slug !== s));
+                    if (inactiveFeeds.length <= 1) setSaveWarning(null);
+                  }}
+                />
               ))}
             </div>
           )}
@@ -419,50 +427,184 @@ export default function ModelPreviewCard({
   );
 }
 
-function InlineActivateButton({ slug, onActivated }: { slug: string; onActivated: (slug: string) => void }) {
+interface InactiveFeed {
+  slug: string;
+  name: string;
+  costPerCall: number;
+  authEnvVar: string | null;
+  hasKey: boolean;
+  keySetupUrl: string | null;
+}
+
+function InlineActivateButton({
+  feed,
+  onActivated,
+}: {
+  feed: InactiveFeed;
+  onActivated: (slug: string) => void;
+}) {
   const [loading, setLoading] = useState(false);
   const [activated, setActivated] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [savingKey, setSavingKey] = useState(false);
+  const [needsKey, setNeedsKey] = useState(!!feed.authEnvVar && !feed.hasKey);
+
+  const dailyCost = feed.costPerCall * 32;
 
   async function handleActivate() {
     setLoading(true);
-    setError(false);
+    setError(null);
     try {
-      const res = await fetch(`/api/admin/feeds/${slug}/activate`, {
+      const res = await fetch(`/api/admin/feeds/${feed.slug}/activate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ active: true }),
       });
+      const body = await res.json();
       if (!res.ok) {
-        setError(true);
+        if (body.error === "missing_api_key") {
+          setNeedsKey(true);
+          setShowKeyInput(true);
+        } else {
+          setError(body.error ?? "Activation failed");
+        }
         return;
       }
       setActivated(true);
-      onActivated(slug);
+      onActivated(feed.slug);
     } catch {
-      setError(true);
+      setError("Network error");
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleSaveKeyAndActivate() {
+    if (!apiKey.trim()) return;
+    setSavingKey(true);
+    setError(null);
+    try {
+      // Save and validate the key
+      const keyRes = await fetch(`/api/admin/feeds/${feed.slug}/key`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+      const keyBody = await keyRes.json();
+      if (!keyRes.ok) {
+        setError(keyBody.error ?? "Failed to save key");
+        return;
+      }
+
+      // Now activate the feed
+      const actRes = await fetch(`/api/admin/feeds/${feed.slug}/activate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: true }),
+      });
+      if (!actRes.ok) {
+        const actBody = await actRes.json();
+        setError(actBody.error ?? "Activation failed after key save");
+        return;
+      }
+
+      setActivated(true);
+      onActivated(feed.slug);
+    } catch {
+      setError("Network error");
+    } finally {
+      setSavingKey(false);
+    }
+  }
+
   if (activated) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-medium">
-        {slug} activated
-      </span>
+      <div className="flex items-center justify-between bg-green-50 rounded-lg px-2.5 py-1.5">
+        <div>
+          <span className="text-[11px] font-medium text-green-800">{feed.name}</span>
+          <span className="text-[10px] text-green-600 ml-2">Activated</span>
+        </div>
+        <span className="text-[10px] text-green-600">Data available after next feed run</span>
+      </div>
     );
   }
 
   return (
-    <button
-      onClick={handleActivate}
-      disabled={loading}
-      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-        loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-      } ${error ? "bg-red-100 text-red-700" : "bg-charcoal text-white hover:bg-charcoal/80"}`}
-    >
-      {loading ? "..." : error ? `${slug} failed` : `Activate ${slug}`}
-    </button>
+    <div className="space-y-1" role="status" aria-live="polite">
+      <div className="flex items-center justify-between bg-white border border-border-gray rounded-lg px-2.5 py-1.5">
+        <div className="min-w-0">
+          <span className="text-[11px] font-medium text-charcoal">{feed.name}</span>
+          {feed.costPerCall === 0 ? (
+            <span className="text-[10px] text-green-700 ml-2">Free</span>
+          ) : (
+            <span className="text-[10px] text-amber-700 ml-2">~${dailyCost.toFixed(2)}/day</span>
+          )}
+        </div>
+        {needsKey && !showKeyInput ? (
+          <button
+            onClick={() => setShowKeyInput(true)}
+            className="px-2.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 cursor-pointer transition-colors shrink-0"
+          >
+            Add API Key
+          </button>
+        ) : !needsKey ? (
+          <button
+            onClick={handleActivate}
+            disabled={loading}
+            aria-label={`Activate ${feed.name}`}
+            className={`px-2.5 py-0.5 rounded text-[10px] font-medium transition-colors shrink-0 ${
+              loading
+                ? "opacity-50 cursor-not-allowed bg-charcoal text-white"
+                : "bg-charcoal text-white hover:bg-charcoal/80 cursor-pointer"
+            }`}
+          >
+            {loading ? "..." : "Activate"}
+          </button>
+        ) : null}
+      </div>
+
+      {showKeyInput && (
+        <div className="bg-white border border-border-gray rounded-lg px-2.5 py-2 space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={feed.authEnvVar ?? "API key"}
+              className="flex-1 text-[11px] border border-border-gray rounded px-2 py-1 bg-light-gray focus:outline-none focus:border-charcoal font-mono"
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveKeyAndActivate(); }}
+            />
+            <button
+              onClick={handleSaveKeyAndActivate}
+              disabled={savingKey || !apiKey.trim()}
+              className="px-2.5 py-1 rounded text-[10px] font-medium bg-charcoal text-white hover:bg-charcoal/80 disabled:opacity-50 cursor-pointer shrink-0 transition-colors"
+            >
+              {savingKey ? "..." : "Save & Activate"}
+            </button>
+          </div>
+          {feed.keySetupUrl && (
+            <a
+              href={feed.keySetupUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] text-accent-blue hover:underline"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+              Get an API key
+            </a>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="text-[10px] bg-red-50 rounded px-2.5 py-1.5">
+          <div className="text-red-700">{error}</div>
+        </div>
+      )}
+    </div>
   );
 }

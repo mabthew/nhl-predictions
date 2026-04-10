@@ -315,6 +315,8 @@ export default function ModelBuilderChat() {
                         costPerCall: number;
                         dailyCost: number;
                         isActive: boolean;
+                        authEnvVar?: string | null;
+                        keySetupUrl?: string | null;
                       }>;
                       return (
                         <div
@@ -409,6 +411,8 @@ interface FeedCardProps {
   costPerCall: number;
   dailyCost: number;
   isActive: boolean;
+  authEnvVar?: string | null;
+  keySetupUrl?: string | null;
 }
 
 function FeedCard({
@@ -419,12 +423,19 @@ function FeedCard({
   costPerCall,
   dailyCost,
   isActive,
+  authEnvVar,
+  keySetupUrl,
 }: FeedCardProps) {
   const [currentActive, setCurrentActive] = useState(isActive);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [successNote, setSuccessNote] = useState<string | null>(null);
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [apiKey, setApiKey] = useState("");
+  const [savingKey, setSavingKey] = useState(false);
+
+  const needsKey = error === "missing_api_key" || (!!authEnvVar && showKeyInput);
 
   async function handleToggle() {
     setLoading(true);
@@ -442,7 +453,12 @@ function FeedCard({
       const body = await res.json();
 
       if (!res.ok) {
-        setError(body.error ?? "Activation failed");
+        if (body.error === "missing_api_key") {
+          setError("missing_api_key");
+          setShowKeyInput(true);
+        } else {
+          setError(body.error ?? "Activation failed");
+        }
         return;
       }
 
@@ -464,13 +480,50 @@ function FeedCard({
     }
   }
 
+  async function handleSaveKeyAndActivate() {
+    if (!apiKey.trim()) return;
+    setSavingKey(true);
+    setError(null);
+    try {
+      const keyRes = await fetch(`/api/admin/feeds/${slug}/key`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+      const keyBody = await keyRes.json();
+      if (!keyRes.ok) {
+        setError(keyBody.error ?? "Failed to save key");
+        return;
+      }
+
+      const actRes = await fetch(`/api/admin/feeds/${slug}/activate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: true }),
+      });
+      const actBody = await actRes.json();
+      if (!actRes.ok) {
+        setError(actBody.error ?? "Activation failed");
+        return;
+      }
+
+      setCurrentActive(true);
+      setShowKeyInput(false);
+      setSuccessNote("Data will be available after the next scheduled feed run.");
+    } catch {
+      setError("Network error");
+    } finally {
+      setSavingKey(false);
+    }
+  }
+
   return (
     <div className="bg-white rounded-lg p-2 text-xs">
       <div className="flex items-center justify-between gap-2">
         <span className="font-semibold text-charcoal">{name}</span>
         <button
           onClick={handleToggle}
-          disabled={loading}
+          disabled={loading || showKeyInput}
           aria-label={
             loading
               ? `Toggling ${name}`
@@ -479,7 +532,7 @@ function FeedCard({
                 : `Activate ${name}`
           }
           className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-            loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            loading || showKeyInput ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
           } ${
             currentActive
               ? "bg-green-100 text-green-700 hover:bg-green-200"
@@ -492,11 +545,64 @@ function FeedCard({
       <div className="text-medium-gray mt-0.5">{description}</div>
       <div className="flex flex-wrap gap-3 mt-1 text-[10px]">
         <span className="text-amber-700">Factor: {factorLabel}</span>
-        <span className="text-amber-700">${costPerCall}/call</span>
-        <span className="text-amber-700">~${dailyCost.toFixed(2)}/day</span>
+        {costPerCall === 0 ? (
+          <span className="text-green-700 font-medium">Free</span>
+        ) : (
+          <>
+            <span className="text-amber-700">${costPerCall}/call</span>
+            <span className="text-amber-700">~${dailyCost.toFixed(2)}/day</span>
+          </>
+        )}
       </div>
+      {authEnvVar && !currentActive && !showKeyInput && !error && (
+        <div className="flex items-center gap-1 mt-1.5 text-[10px] text-medium-gray">
+          <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+          </svg>
+          <span>Requires API key</span>
+        </div>
+      )}
+
+      {showKeyInput && (
+        <div className="mt-1.5 space-y-1.5">
+          <div className="text-[10px] text-amber-800 font-medium">
+            API key required for {name}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={authEnvVar ?? "API key"}
+              className="flex-1 text-[11px] border border-border-gray rounded px-2 py-1 bg-light-gray focus:outline-none focus:border-charcoal font-mono"
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveKeyAndActivate(); }}
+            />
+            <button
+              onClick={handleSaveKeyAndActivate}
+              disabled={savingKey || !apiKey.trim()}
+              className="px-2.5 py-1 rounded text-[10px] font-medium bg-charcoal text-white hover:bg-charcoal/80 disabled:opacity-50 cursor-pointer shrink-0 transition-colors"
+            >
+              {savingKey ? "..." : "Save & Activate"}
+            </button>
+          </div>
+          {keySetupUrl && (
+            <a
+              href={keySetupUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[10px] text-accent-blue hover:underline"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+              Get an API key
+            </a>
+          )}
+        </div>
+      )}
+
       <div role="status" aria-live="polite">
-        {error && (
+        {error && error !== "missing_api_key" && (
           <div className="mt-1.5 text-[10px] text-red-600 bg-red-50 px-2 py-1 rounded">
             {error}
           </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getActiveFeeds, DAILY_COST_WARNING, DAILY_COST_HARD_LIMIT, TEAMS_PER_DAY } from "@/lib/data-feeds";
+import { getSecret } from "@/lib/secrets";
 import { logApiCall } from "@/lib/api-usage";
 
 export async function POST(
@@ -36,12 +37,20 @@ export async function POST(
     let warning: string | undefined;
 
     if (active) {
-      // Check env var is present if required
-      if (feed.authEnvVar && !process.env[feed.authEnvVar]) {
-        return NextResponse.json(
-          { error: `Missing environment variable ${feed.authEnvVar}` },
-          { status: 400 }
-        );
+      // Check API key is available (env var or encrypted DB store)
+      if (feed.authEnvVar) {
+        const hasKey = process.env[feed.authEnvVar] || await getSecret(feed.authEnvVar);
+        if (!hasKey) {
+          return NextResponse.json(
+            {
+              error: "missing_api_key",
+              envVarName: feed.authEnvVar,
+              provider: feed.provider,
+              keySetupUrl: feed.keySetupUrl,
+            },
+            { status: 400 }
+          );
+        }
       }
 
       // Cost guard rail: re-read active feeds from DB to avoid race conditions
@@ -80,11 +89,17 @@ export async function POST(
       () => {}
     );
 
+    const dailyCost = updated.isActive ? updated.costPerCall * TEAMS_PER_DAY : 0;
+
     return NextResponse.json({
       slug: updated.slug,
       name: updated.name,
       isActive: updated.isActive,
       ...(warning && { warning }),
+      costImpact: {
+        dailyCost: Math.round(dailyCost * 100) / 100,
+        monthlyCost: Math.round(dailyCost * 30 * 100) / 100,
+      },
     });
   } catch (error) {
     console.error("Feed activation error:", error);

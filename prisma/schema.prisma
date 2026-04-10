@@ -128,6 +128,7 @@ model DataFeed {
   provider        String
   endpoint        String
   authEnvVar      String?
+  keySetupUrl     String?
   costPerCall     Float    @default(0)
   cacheDurationS  Int      @default(86400)
   factorKey       String   @unique
@@ -140,6 +141,17 @@ model DataFeed {
   methodologyBold String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model FeedSecret {
+  id           String   @id @default(cuid())
+  envVarName   String   @unique
+  encrypted    String
+  iv           String
+  tag          String
+  vercelSynced Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model FeedCache {
