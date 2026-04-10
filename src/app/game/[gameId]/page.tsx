@@ -306,8 +306,7 @@ export default async function GameDetailPage({
                 </div>
               </div>
               <p className="text-[11px] text-medium-gray mt-3">
-                Composite score includes home ice advantage for {homeTeam.teamAbbrev}.
-                Weights: Goal Differential 20%, Shots 14%, Recent Form 12%, Penalty Kill 12%, Power Play 10%, Goalie 10%, Injury Impact 10%, Futures Market 5%, Shots Against 5%, Faceoffs 2%.
+                Composite score reflects all model factors including home ice advantage for {homeTeam.teamAbbrev}.
               </p>
             </section>
           </div>
