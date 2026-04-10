@@ -119,6 +119,7 @@ export default function ModelPreviewCard({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveWarning, setSaveWarning] = useState<string | null>(null);
+  const [inactiveSlugs, setInactiveSlugs] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [editName, setEditName] = useState(config.name);
   const [rangePreset, setRangePreset] = useState<RangePreset>("7d");
@@ -197,6 +198,7 @@ export default function ModelPreviewCard({
       const body = await res.json();
       if (body.warning) {
         setSaveWarning(body.warning);
+        setInactiveSlugs(body.inactiveSlugs ?? []);
       }
       setSaved(true);
       onSave?.();
@@ -397,12 +399,70 @@ export default function ModelPreviewCard({
       )}
 
       {saveWarning && (
-        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
-          {saveWarning}
+        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg space-y-2">
+          <p>Inactive feeds included. Their factors will use neutral scores until activated.</p>
+          {inactiveSlugs.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {inactiveSlugs.map((slug) => (
+                <InlineActivateButton key={slug} slug={slug} onActivated={(s) => {
+                  setInactiveSlugs((prev) => prev.filter((x) => x !== s));
+                  if (inactiveSlugs.length <= 1) setSaveWarning(null);
+                }} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {preview && <BuilderPreviewResults data={preview} />}
     </div>
+  );
+}
+
+function InlineActivateButton({ slug, onActivated }: { slug: string; onActivated: (slug: string) => void }) {
+  const [loading, setLoading] = useState(false);
+  const [activated, setActivated] = useState(false);
+  const [error, setError] = useState(false);
+
+  async function handleActivate() {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await fetch(`/api/admin/feeds/${slug}/activate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: true }),
+      });
+      if (!res.ok) {
+        setError(true);
+        return;
+      }
+      setActivated(true);
+      onActivated(slug);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (activated) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-medium">
+        {slug} activated
+      </span>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleActivate}
+      disabled={loading}
+      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+        loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      } ${error ? "bg-red-100 text-red-700" : "bg-charcoal text-white hover:bg-charcoal/80"}`}
+    >
+      {loading ? "..." : error ? `${slug} failed` : `Activate ${slug}`}
+    </button>
   );
 }
