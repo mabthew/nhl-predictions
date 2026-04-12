@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TimeAgo from "@/components/TimeAgo";
@@ -5,6 +6,20 @@ import Ticker from "@/components/Ticker";
 import WeekView from "@/components/WeekView";
 import FuturesTable from "@/components/FuturesTable";
 import { getPredictions } from "@/lib/get-predictions";
+
+export const metadata: Metadata = {
+  title: "NHL Predictions Today, Betting Picks and Analysis | DegenHL",
+  description:
+    "Daily NHL game picks, over/under predictions, and player props powered by a multi-factor prediction model. Free betting analysis updated every day.",
+  keywords: [
+    "NHL predictions today",
+    "NHL betting picks",
+    "hockey predictions",
+    "NHL over under",
+    "NHL player props",
+    "NHL game analysis",
+  ],
+};
 
 export const revalidate = 900;
 

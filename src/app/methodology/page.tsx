@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -114,6 +115,14 @@ function PipelineArrow({ direction }: { direction: "right" | "down" }) {
     </div>
   );
 }
+
+// --- Metadata ---
+
+export const metadata: Metadata = {
+  title: "How Our NHL Predictions Work | DegenHL",
+  description:
+    "Learn how DegenHL predicts NHL games using a 5-factor composite scoring model covering team performance, goaltending, roster health, market signals, and schedule context.",
+};
 
 // --- Page ---
 

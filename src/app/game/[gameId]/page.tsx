@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
@@ -19,6 +20,35 @@ import { TEAM_COLORS } from "@/lib/team-colors";
 import CollapsibleFactors from "@/components/CollapsibleFactors";
 
 export const revalidate = 900;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ gameId: string }>;
+}): Promise<Metadata> {
+  const { gameId } = await params;
+  const data = await getPredictions();
+
+  if (!data) return {};
+
+  const game = data.predictions.find((p) => String(p.gameId) === gameId);
+  if (!game) return {};
+
+  const { homeTeam, awayTeam, predictedWinner, winnerConfidence } = game;
+  const winner = predictedWinner === "home" ? homeTeam : awayTeam;
+  const title = `${awayTeam.teamName} vs ${homeTeam.teamName} Prediction | DegenHL`;
+  const description = `Our model picks ${winner.teamName} with ${winnerConfidence}% confidence. Get the full matchup breakdown, over/under prediction, and player prop pick.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+    },
+  };
+}
 
 export default async function GameDetailPage({
   params,
@@ -52,6 +82,33 @@ export default async function GameDetailPage({
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SportsEvent",
+            name: `${awayTeam.teamName} at ${homeTeam.teamName}`,
+            startDate: game.gameDate,
+            location: {
+              "@type": "Place",
+              name: game.venue,
+            },
+            homeTeam: {
+              "@type": "SportsTeam",
+              name: homeTeam.teamName,
+            },
+            awayTeam: {
+              "@type": "SportsTeam",
+              name: awayTeam.teamName,
+            },
+            eventStatus:
+              game.gameStatus === "final"
+                ? "https://schema.org/EventCompleted"
+                : "https://schema.org/EventScheduled",
+          }),
+        }}
+      />
       <Header />
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8">

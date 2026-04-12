@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AccuracyChart from "@/components/AccuracyChart";
@@ -12,6 +13,12 @@ import {
 import { prisma } from "@/lib/db";
 import { HISTORY_MODEL, MODEL_REGISTRY, getModelConfig } from "@/lib/model-configs";
 import { getSession } from "@/lib/auth";
+
+export const metadata: Metadata = {
+  title: "Prediction History and Accuracy | DegenHL",
+  description:
+    "Track our NHL prediction model accuracy over time. View historical win rate, over/under performance, and daily results across the full season.",
+};
 
 export const revalidate = 900;
 

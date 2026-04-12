@@ -35,6 +35,12 @@ export const metadata: Metadata = {
     description:
       "Daily NHL picks, over/under predictions, and player props.",
   },
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION ?? "",
+    other: {
+      "msvalidate.01": process.env.BING_SITE_VERIFICATION ?? "",
+    },
+  },
 };
 
 export default function RootLayout({
@@ -44,7 +50,31 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${poppins.variable} ${teko.variable} h-full antialiased`}>
+      <head>
+        <link rel="preconnect" href="https://assets.nhle.com" />
+        <link rel="preconnect" href="https://cms.nhl.bamgrid.com" />
+      </head>
       <body className="min-h-full flex flex-col font-poppins">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  name: "DegenHL",
+                  url: "https://degenhl.com",
+                },
+                {
+                  "@type": "WebSite",
+                  name: "DegenHL",
+                  url: "https://degenhl.com",
+                },
+              ],
+            }),
+          }}
+        />
         {children}
         <EngagementTracker />
         <Analytics />

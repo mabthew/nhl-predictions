@@ -1,6 +1,18 @@
 import type { MetadataRoute } from "next";
+import { getPredictions } from "@/lib/get-predictions";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const data = await getPredictions();
+
+  const gameEntries: MetadataRoute.Sitemap = (data?.predictions ?? []).map(
+    (prediction) => ({
+      url: `https://degenhl.com/game/${String(prediction.gameId)}`,
+      lastModified: new Date(),
+      changeFrequency: "daily" as const,
+      priority: 0.6,
+    })
+  );
+
   return [
     {
       url: "https://degenhl.com",
@@ -20,5 +32,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.5,
     },
+    ...gameEntries,
   ];
 }
