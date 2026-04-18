@@ -9,7 +9,7 @@ const FEEDS = [
     description:
       "Expected goals (xG) model measuring shot quality and scoring chance probability. More predictive than raw shot counts because it weights shots by location, type, and game situation.",
     provider: "moneypuck",
-    endpoint: "https://moneypuck.com/moneypuck/playerData/seasonSummary/2024/regular/teams/{team}.csv",
+    endpoint: "https://moneypuck.com/moneypuck/playerData/seasonSummary/{year}/regular/teams.csv",
     authEnvVar: null,
     keySetupUrl: null,
     costPerCall: 0.002,

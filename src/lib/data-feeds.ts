@@ -274,12 +274,115 @@ export async function validateFeedSlugs(
   return { valid: unknownSlugs.length === 0, unknownSlugs, inactiveSlugs };
 }
 
+type FeedFetchArgs = {
+  slug: string;
+  provider: string;
+  endpoint: string;
+  authEnvVar: string | null;
+  costPerCall: number;
+  cacheDurationS: number;
+};
+
+// MoneyPuck publishes one consolidated CSV per season at /seasonSummary/{year}/regular/teams.csv
+// with one row per team × situation. We want situation="all" and the xGoalsFor per game.
+async function fetchMoneyPuckTeamsCsv(
+  feed: FeedFetchArgs,
+  teamAbbrevs: string[],
+  date: string
+): Promise<{ fetched: number; cached: number; errors: number }> {
+  const d = new Date(date);
+  // NHL regular seasons start in October. Before Oct, we're still inside the
+  // season that began the prior calendar year.
+  const seasonYear =
+    d.getUTCMonth() >= 9 ? d.getUTCFullYear() : d.getUTCFullYear() - 1;
+
+  const url = feed.endpoint.replace("{year}", String(seasonYear));
+  const start = Date.now();
+
+  let res: Response;
+  try {
+    res = await fetch(url, { cache: "no-store" });
+  } catch {
+    return { fetched: 0, cached: 0, errors: teamAbbrevs.length };
+  }
+
+  const elapsed = Date.now() - start;
+  logApiCall(feed.provider, feed.slug, res.status, elapsed).catch(() => {});
+
+  if (!res.ok) {
+    return { fetched: 0, cached: 0, errors: teamAbbrevs.length };
+  }
+
+  const csv = await res.text();
+  const lines = csv.trim().split("\n");
+  if (lines.length < 2) return { fetched: 0, cached: 0, errors: teamAbbrevs.length };
+
+  const headers = lines[0].split(",");
+  const teamIdx = headers.indexOf("team");
+  const situationIdx = headers.indexOf("situation");
+  const gpIdx = headers.indexOf("games_played");
+  const xgfIdx = headers.indexOf("xGoalsFor");
+
+  if (teamIdx < 0 || situationIdx < 0 || gpIdx < 0 || xgfIdx < 0) {
+    return { fetched: 0, cached: 0, errors: teamAbbrevs.length };
+  }
+
+  const validTeams = new Set(teamAbbrevs);
+  let fetched = 0;
+  let cached = 0;
+  let errors = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(",");
+    if (cols[situationIdx] !== "all") continue;
+    const abbrev = cols[teamIdx];
+    if (!validTeams.has(abbrev)) continue;
+
+    const games = parseFloat(cols[gpIdx]);
+    const xgf = parseFloat(cols[xgfIdx]);
+    if (!games || isNaN(xgf)) {
+      errors++;
+      continue;
+    }
+    const value = xgf / games;
+
+    try {
+      await prisma.feedCache.upsert({
+        where: {
+          feedSlug_teamAbbrev_date: {
+            feedSlug: feed.slug,
+            teamAbbrev: abbrev,
+            date,
+          },
+        },
+        update: {
+          value,
+          rawData: { xGoalsFor: xgf, gamesPlayed: games, season: seasonYear },
+        },
+        create: {
+          feedSlug: feed.slug,
+          teamAbbrev: abbrev,
+          date,
+          value,
+          rawData: { xGoalsFor: xgf, gamesPlayed: games, season: seasonYear },
+        },
+      });
+      fetched++;
+      cached++;
+    } catch {
+      errors++;
+    }
+  }
+
+  return { fetched, cached, errors };
+}
+
 /**
  * Fetch data from a feed's endpoint for all teams and cache it.
  * This is called by the cron job, not by preview or prediction routes.
  */
 export async function fetchAndCacheFeedData(
-  feed: { slug: string; provider: string; endpoint: string; authEnvVar: string | null; costPerCall: number; cacheDurationS: number },
+  feed: FeedFetchArgs,
   teamAbbrevs: string[],
   date: string
 ): Promise<{ fetched: number; cached: number; errors: number }> {
@@ -298,6 +401,10 @@ export async function fetchAndCacheFeedData(
     if (ageS < feed.cacheDurationS) {
       return { fetched: 0, cached: 0, errors: 0 }; // still fresh
     }
+  }
+
+  if (feed.provider === "moneypuck") {
+    return fetchMoneyPuckTeamsCsv(feed, teamAbbrevs, date);
   }
 
   const apiKey = feed.authEnvVar
