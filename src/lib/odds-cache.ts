@@ -59,6 +59,28 @@ export async function saveOddsToCache(
   });
 }
 
+export async function saveGameOddsToCache(
+  gameOdds: OddsResponse[]
+): Promise<void> {
+  await prisma.oddsCache.upsert({
+    where: { id: "latest" },
+    update: {
+      gameOdds: gameOdds as unknown as Prisma.InputJsonValue,
+    },
+    create: {
+      id: "latest",
+      gameOdds: gameOdds as unknown as Prisma.InputJsonValue,
+      playerProps: [] as unknown as Prisma.InputJsonValue,
+      futures: [] as unknown as Prisma.InputJsonValue,
+    },
+  });
+}
+
+// Odds cron runs hourly (0 * * * *). Anything older than 3h means the cron is
+// failing — callers receive empty arrays so predictions render without prices
+// rather than with stale numbers. The 2h grace absorbs retries and clock skew.
+const ODDS_CACHE_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+
 export async function loadOddsFromCache(): Promise<{
   gameOdds: OddsResponse[];
   playerProps: OddsResponse[];
@@ -70,6 +92,14 @@ export async function loadOddsFromCache(): Promise<{
     });
 
     if (!cached) {
+      return { gameOdds: [], playerProps: [], futures: [] };
+    }
+
+    const ageMs = Date.now() - cached.updatedAt.getTime();
+    if (ageMs > ODDS_CACHE_MAX_AGE_MS) {
+      console.warn(
+        `Odds cache is stale (age ${Math.round(ageMs / 3_600_000)}h) — returning empty odds`
+      );
       return { gameOdds: [], playerProps: [], futures: [] };
     }
 

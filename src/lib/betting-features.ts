@@ -1,6 +1,11 @@
 import { GamePrediction, BestBet, BetType, Parlay, ParlayLeg } from "./types";
 import { americanToImpliedProbability } from "./utils";
 
+// Edges above this threshold almost always indicate stale odds, a model bug, or a
+// data feed issue rather than a real market inefficiency. Liquid NHL markets do not
+// leave 20%+ edges sitting around.
+const MAX_PLAUSIBLE_EDGE = 0.20;
+
 interface CandidateBet {
   gameId: number;
   betType: BetType;
@@ -127,7 +132,7 @@ function getCandidateBets(pred: GamePrediction): CandidateBet[] {
     });
   }
 
-  return candidates;
+  return candidates.filter((c) => Math.abs(c.edge) <= MAX_PLAUSIBLE_EDGE);
 }
 
 function buildReasoning(bet: CandidateBet, pred: GamePrediction): string {
