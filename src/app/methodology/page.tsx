@@ -156,7 +156,7 @@ export default function MethodologyPage() {
         </p>
 
         {/* Pipeline */}
-        <div className="bg-white rounded-xl border border-border-gray p-5 mb-10">
+        <div className="bg-white rounded-sm border border-border-gray p-5 mb-10">
           <h2 className="font-teko text-lg font-bold uppercase tracking-tight text-charcoal mb-4">
             How It All Comes Together
           </h2>
@@ -187,7 +187,7 @@ export default function MethodologyPage() {
         {/* Full-width cards: Team Performance, Goaltending */}
         <div className="space-y-4 mb-4">
           {MODEL_SIGNALS.slice(0, 2).map((s) => (
-            <div key={s.title} className="bg-white rounded-xl border border-border-gray p-5">
+            <div key={s.title} className="bg-white rounded-sm border border-border-gray p-5">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center">
                   <FactorIcon icon={s.icon} className="w-4 h-4 text-accent-blue" />
@@ -204,7 +204,7 @@ export default function MethodologyPage() {
         {/* 2-column cards: Roster Health, Market Signals */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           {MODEL_SIGNALS.slice(2, 4).map((s) => (
-            <div key={s.title} className="bg-white rounded-xl border border-border-gray p-5">
+            <div key={s.title} className="bg-white rounded-sm border border-border-gray p-5">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center">
                   <FactorIcon icon={s.icon} className="w-4 h-4 text-accent-blue" />
@@ -220,7 +220,7 @@ export default function MethodologyPage() {
 
         {/* Final full-width card: Schedule */}
         <div className="mb-10">
-          <div className="bg-white rounded-xl border border-border-gray p-5">
+          <div className="bg-white rounded-sm border border-border-gray p-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-full bg-accent-blue/10 flex items-center justify-center">
                 <FactorIcon icon={MODEL_SIGNALS[4].icon} className="w-4 h-4 text-accent-blue" />
@@ -234,7 +234,7 @@ export default function MethodologyPage() {
         </div>
 
         {/* Home Ice Advantage */}
-        <div className="bg-light-gray rounded-xl border border-border-gray p-5 mb-10">
+        <div className="bg-light-gray rounded-sm border border-border-gray p-5 mb-10">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
               <FactorIcon icon="arena" className="w-4 h-4 text-green-600" />
@@ -250,7 +250,7 @@ export default function MethodologyPage() {
         </div>
 
         {/* Confidence Scores */}
-        <div className="bg-white rounded-xl border border-border-gray shadow-sm p-6 mb-8">
+        <div className="bg-white rounded-sm border border-border-gray shadow-sm p-6 mb-8">
           <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-1">
             Confidence Scores
           </h2>
@@ -286,7 +286,7 @@ export default function MethodologyPage() {
         </div>
 
         {/* Over/Under Predictions */}
-        <div className="bg-white rounded-xl border border-border-gray shadow-sm p-6 mb-8">
+        <div className="bg-white rounded-sm border border-border-gray shadow-sm p-6 mb-8">
           <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-1">
             Over/Under Predictions
           </h2>
@@ -335,7 +335,7 @@ export default function MethodologyPage() {
         </div>
 
         {/* Player Props */}
-        <div className="bg-white rounded-xl border border-border-gray shadow-sm p-6 mb-8">
+        <div className="bg-white rounded-sm border border-border-gray shadow-sm p-6 mb-8">
           <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-1">
             Player Prop Picks
           </h2>

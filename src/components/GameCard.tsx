@@ -26,7 +26,7 @@ export default function GameCard({ prediction }: GameCardProps) {
   return (
     <div
       id={`game-${prediction.gameId}`}
-      className={`bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow scroll-mt-20 ${
+      className={`bg-white rounded-sm shadow-sm overflow-hidden hover:shadow-md transition-shadow scroll-mt-20 ${
         isLive ? "border-2 border-brand-primary/60 ring-1 ring-brand-primary/20" : "border border-border-gray"
       }`}
     >
@@ -36,12 +36,12 @@ export default function GameCard({ prediction }: GameCardProps) {
         <div className="px-5 pt-4 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {isLive ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-brand-primary">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-widest text-brand-primary">
                 <span className="h-2 w-2 rounded-full bg-brand-primary header-pulse" />
-                LIVE — {prediction.liveScore?.periodLabel} {prediction.liveScore?.timeRemaining}
+                LIVE · {prediction.liveScore?.periodLabel} {prediction.liveScore?.timeRemaining}
               </span>
             ) : (
-              <span className="text-[11px] font-bold uppercase tracking-widest text-charcoal">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-charcoal">
                 {formatGameTime(prediction.startTime)}
               </span>
             )}
@@ -49,7 +49,7 @@ export default function GameCard({ prediction }: GameCardProps) {
               <ForecastBadge tier={prediction.forecastTier} />
             )}
           </div>
-          <span className="text-[11px] uppercase tracking-wider text-medium-gray/60">{prediction.venue}</span>
+          <span className="text-[10px] font-mono uppercase tracking-wider text-medium-gray/60">{prediction.venue}</span>
         </div>
 
         {/* Matchup row */}
@@ -105,7 +105,7 @@ export default function GameCard({ prediction }: GameCardProps) {
         )}
 
         {/* Pick zone — visually distinct */}
-        <div className={`mx-4 mb-3 rounded-lg px-4 py-3.5 ${isLive ? "bg-light-gray/50 border border-border-gray" : "bg-light-gray/70"}`}>
+        <div className={`mx-4 mb-3 px-4 py-3.5 border-t border-b border-dashed border-border-gray ${isLive ? "bg-light-gray/50" : "bg-light-gray/70"}`}>
           {/* Puck Line — primary pick */}
           {prediction.puckLine ? (
             <>
@@ -116,7 +116,7 @@ export default function GameCard({ prediction }: GameCardProps) {
                   </span>
                   <span className="text-xs font-bold text-charcoal ml-1">({formatOdds(prediction.puckLine.awayOdds)})</span>
                 </div>
-                <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-medium-gray">
                   {isLive ? "Pre-Game PL" : "Puck Line"}
                 </span>
                 <div className="text-center">
@@ -129,7 +129,7 @@ export default function GameCard({ prediction }: GameCardProps) {
               {/* Spread confidence */}
               {prediction.puckLine?.confidence != null && (
                 <div className="flex items-center justify-center gap-2 mt-2">
-                  <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Spread Confidence</span>
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-medium-gray">Spread Confidence</span>
                   <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
@@ -154,8 +154,8 @@ export default function GameCard({ prediction }: GameCardProps) {
                 </div>
               )}
               {/* Winner pick */}
-              <div className="pt-2 mt-2 border-t border-border-gray/40 flex items-center justify-center gap-2">
-                <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Favorite</span>
+              <div className="pt-2 mt-2 border-t border-dashed border-border-gray/60 flex items-center justify-center gap-2">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-medium-gray">Favorite</span>
                 <span className="text-xs font-bold text-charcoal">{winnerAbbrev}</span>
                 <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
                   <div className="h-full bg-green-500 rounded-full" style={{ width: `${winnerConfidence}%` }} />
@@ -167,7 +167,7 @@ export default function GameCard({ prediction }: GameCardProps) {
             /* Fallback when no puck line data */
             <>
               <div className="flex flex-col items-center mb-2">
-                <span className="text-[11px] uppercase tracking-widest text-medium-gray font-bold">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-medium-gray">
                   {isLive ? "Pre-Game Pick" : "Our Pick"}
                 </span>
                 <span className="font-teko text-3xl font-bold leading-none text-charcoal">
@@ -194,10 +194,10 @@ export default function GameCard({ prediction }: GameCardProps) {
       {/* Expand bar */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-center gap-1.5 py-2.5 hover:bg-light-gray transition-colors border-t border-border-gray/50"
+        className="w-full flex items-center justify-center gap-1.5 py-2.5 hover:bg-light-gray transition-colors border-t border-dashed border-border-gray"
         aria-label="Toggle quick view"
       >
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-medium-gray">
+        <span className="text-[10px] font-mono font-semibold uppercase tracking-widest text-medium-gray">
           {expanded ? "Hide" : "Quick View"}
         </span>
         <svg
@@ -219,8 +219,8 @@ export default function GameCard({ prediction }: GameCardProps) {
         }`}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-border-gray p-5 bg-light-gray/50">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-medium-gray mb-3">
+          <div className="border-t border-dashed border-border-gray p-5 bg-light-gray/50">
+            <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-medium-gray mb-3">
               Matchup Breakdown
             </h3>
 
@@ -238,7 +238,7 @@ export default function GameCard({ prediction }: GameCardProps) {
               {prediction.playerProp ? (
                 <PlayerProp prop={prediction.playerProp} />
               ) : (
-                <div className="bg-light-gray rounded-lg p-3 flex items-center justify-center">
+                <div className="bg-white border border-dashed border-border-gray p-3 flex items-center justify-center">
                   <p className="text-xs text-medium-gray italic">
                     {prediction.forecastTier !== "full"
                       ? "Player props available closer to game time"
@@ -250,7 +250,7 @@ export default function GameCard({ prediction }: GameCardProps) {
 
             <Link
               href={`/game/${prediction.gameId}`}
-              className="flex items-center justify-center gap-2 w-full py-2.5 bg-charcoal text-white text-sm font-semibold rounded-lg hover:bg-charcoal/90 transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-2.5 bg-charcoal text-white text-xs font-mono font-semibold uppercase tracking-widest rounded-sm hover:bg-charcoal/90 transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
               View Full Analysis

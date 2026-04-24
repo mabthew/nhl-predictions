@@ -5,11 +5,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
     game.predictedWinner === "home" ? game.homeAbbrev : game.awayAbbrev;
 
   return (
-    <div
-      className={`bg-white rounded-xl border-l-4 shadow-sm overflow-hidden ${
-        game.winnerCorrect ? "border-green-500" : "border-brand-primary"
-      }`}
-    >
+    <div className="bg-white rounded-sm border border-border-gray shadow-sm overflow-hidden">
       {/* Matchup + Score */}
       <div className="p-4 pb-3">
         <div className="flex items-center justify-between mb-3">
@@ -20,15 +16,15 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
             <span className="text-sm font-bold text-charcoal">
               {game.awayAbbrev}
             </span>
-            <span className="font-teko text-xl font-bold text-charcoal">
+            <span className="font-teko text-xl font-bold text-charcoal tabular-nums">
               {game.awayScore}
             </span>
           </div>
 
-          <span className="text-xs text-medium-gray font-semibold">FINAL</span>
+          <span className="text-[10px] font-mono text-medium-gray uppercase tracking-widest">FINAL</span>
 
           <div className="flex items-center gap-2">
-            <span className="font-teko text-xl font-bold text-charcoal">
+            <span className="font-teko text-xl font-bold text-charcoal tabular-nums">
               {game.homeScore}
             </span>
             <span className="text-sm font-bold text-charcoal">
@@ -43,10 +39,10 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
         {/* Prediction results */}
         <div className="grid grid-cols-2 gap-2">
           <div
-            className={`rounded-lg px-3 py-2 text-xs ${
+            className={`border border-dashed px-3 py-2 text-xs ${
               game.winnerCorrect
-                ? "bg-green-50 text-green-700"
-                : "bg-red-50 text-brand-primary"
+                ? "border-green-500/60 bg-green-50 text-green-700"
+                : "border-brand-primary/60 bg-red-50 text-brand-primary"
             }`}
           >
             <div className="flex items-center gap-1.5">
@@ -58,10 +54,10 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
           </div>
 
           <div
-            className={`rounded-lg px-3 py-2 text-xs ${
+            className={`border border-dashed px-3 py-2 text-xs ${
               game.ouCorrect
-                ? "bg-green-50 text-green-700"
-                : "bg-red-50 text-brand-primary"
+                ? "border-green-500/60 bg-green-50 text-green-700"
+                : "border-brand-primary/60 bg-red-50 text-brand-primary"
             }`}
           >
             <div className="flex items-center gap-1.5">
@@ -75,7 +71,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
       </div>
 
       {/* Extra details */}
-      <div className="px-4 pb-3 pt-2 border-t border-border-gray bg-light-gray/30 space-y-2">
+      <div className="px-4 pb-3 pt-2 border-t border-dashed border-border-gray bg-light-gray/30 space-y-2">
         {/* Scoring averages */}
         {game.homeGoalsPerGame != null && game.awayGoalsPerGame != null && (
           <div className="flex items-center justify-between text-[11px] text-medium-gray">
@@ -119,8 +115,8 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
         {/* Player prop */}
         {game.propPlayer && (
           <div className="text-[11px] flex items-center gap-1.5">
-            <span className="bg-charcoal text-white text-[11px] font-bold uppercase px-1.5 py-0.5 rounded">
-              Prop
+            <span className="bg-charcoal text-white text-[10px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5">
+              Player Prop
             </span>
             <span className="text-medium-gray">
               {game.propPlayer}{" "}

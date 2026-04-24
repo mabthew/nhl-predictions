@@ -133,7 +133,7 @@ export default async function HistoryPage({
         )}
 
         {dbAvailable && stats.totalGames > 0 && (
-          <div className="bg-charcoal rounded-xl p-6 mb-8 text-white overflow-hidden">
+          <div className="bg-charcoal rounded-sm p-6 mb-8 text-white overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-brand-primary via-brand-primary/80 to-transparent -mt-6 -mx-6 mb-5" />
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
@@ -171,7 +171,7 @@ export default async function HistoryPage({
         )}
 
         {dbAvailable && timeline.length > 1 && (
-          <div className="bg-white rounded-xl border border-border-gray p-6 mb-8">
+          <div className="bg-white rounded-sm border border-border-gray p-6 mb-8">
             <h3 className="font-teko text-xl font-bold text-charcoal uppercase tracking-tight mb-4">
               Accuracy Over Time
             </h3>

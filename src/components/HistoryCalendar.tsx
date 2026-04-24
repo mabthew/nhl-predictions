@@ -78,7 +78,7 @@ export default function HistoryCalendar({
       {/* Calendar + Games side by side on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
         {/* Calendar */}
-        <div className="bg-white rounded-xl border border-border-gray p-4 h-fit">
+        <div className="bg-white rounded-sm border border-border-gray p-4 h-fit">
           {/* Month nav */}
           <div className="flex items-center justify-between mb-4">
             <button
@@ -221,7 +221,7 @@ export default function HistoryCalendar({
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 bg-white rounded-xl border border-border-gray">
+            <div className="text-center py-12 bg-white rounded-sm border border-border-gray">
               <p className="text-sm text-medium-gray">
                 No prediction data for this date.
               </p>

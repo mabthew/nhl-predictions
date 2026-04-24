@@ -226,7 +226,7 @@ export default function ModelComparison({
       {data && (
         <>
           {/* Aggregate summary bar */}
-          <div className="bg-white border border-border-gray rounded-xl p-4">
+          <div className="bg-white border border-border-gray rounded-sm p-4">
             <div className="flex flex-wrap items-center gap-6">
               {resultModelIds.map((id) => {
                 const s = data.summary[id];
@@ -277,7 +277,7 @@ export default function ModelComparison({
           {filteredGames.length > 0 && (
             <div className="space-y-4">
               {Array.from(gamesByDate.entries()).map(([date, games]) => (
-                <div key={date} className="bg-white border border-border-gray rounded-xl overflow-hidden">
+                <div key={date} className="bg-white border border-border-gray rounded-sm overflow-hidden">
                   <div className="bg-light-gray px-4 py-2 border-b border-border-gray">
                     <span className="text-xs font-semibold text-charcoal">{formatDateLabel(date)}</span>
                     <span className="text-xs text-medium-gray ml-2">{games.length} games</span>

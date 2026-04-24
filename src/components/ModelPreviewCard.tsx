@@ -210,7 +210,7 @@ export default function ModelPreviewCard({
   }
 
   return (
-    <div className="bg-light-gray border border-border-gray rounded-xl p-4 my-2 space-y-3">
+    <div className="bg-light-gray border border-border-gray rounded-sm p-4 my-2 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <input

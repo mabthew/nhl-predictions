@@ -286,7 +286,7 @@ export default async function GameDetailPage({
           <div className="lg:col-span-2 space-y-6">
 
             {/* Matchup Breakdown */}
-            <section className="bg-white rounded-xl border-l-4 border-brand-primary shadow-sm p-6">
+            <section className="bg-white rounded-sm border-l-4 border-brand-primary shadow-sm p-6">
               <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
                 Matchup Breakdown
               </h2>
@@ -307,7 +307,7 @@ export default async function GameDetailPage({
 
             {/* Player Career Context */}
             {(profileMap.size > 0) && (
-              <section className="bg-white rounded-xl border-l-4 border-yellow-500 shadow-sm p-6">
+              <section className="bg-white rounded-sm border-l-4 border-yellow-500 shadow-sm p-6">
                 <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
                   Star Player Profiles
                 </h2>
@@ -327,7 +327,7 @@ export default async function GameDetailPage({
             <LineCombos awayLines={awayLines} homeLines={homeLines} />
 
             {/* Scoring Stats */}
-            <section className="bg-white rounded-xl border-l-4 border-accent-blue shadow-sm p-6">
+            <section className="bg-white rounded-sm border-l-4 border-accent-blue shadow-sm p-6">
               <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
                 Scoring Averages
               </h2>
@@ -338,7 +338,7 @@ export default async function GameDetailPage({
             </section>
 
             {/* Composite Score Comparison */}
-            <section className="bg-white rounded-xl border-l-4 border-charcoal/30 shadow-sm p-6">
+            <section className="bg-white rounded-sm border-l-4 border-charcoal/30 shadow-sm p-6">
               <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
                 Composite Score
               </h2>
@@ -372,13 +372,13 @@ export default async function GameDetailPage({
           <div className="space-y-6">
 
             {/* Key Factors */}
-            <section className="bg-white rounded-xl border border-border-gray shadow-sm p-6">
+            <section className="bg-white rounded-sm border border-border-gray shadow-sm p-6">
               <CollapsibleFactors factors={game.keyFactors} />
             </section>
 
             {/* Puck Line */}
             {game.puckLine && (
-              <section className="bg-white rounded-xl border-l-4 border-green-500 shadow-sm p-6">
+              <section className="bg-white rounded-sm border-l-4 border-green-500 shadow-sm p-6">
                 <h2 className="font-teko text-lg font-bold uppercase tracking-tight text-charcoal mb-3">
                   Puck Line (Spread)
                 </h2>
@@ -433,7 +433,7 @@ export default async function GameDetailPage({
             )}
 
             {/* Over/Under */}
-            <section className="bg-white rounded-xl border border-border-gray shadow-sm p-6">
+            <section className="bg-white rounded-sm border border-border-gray shadow-sm p-6">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-teko text-lg font-bold uppercase tracking-tight text-charcoal">
                   Over/Under
@@ -465,7 +465,7 @@ export default async function GameDetailPage({
             </section>
 
             {/* Player Prop — always shown with fallback */}
-            <section className="bg-white rounded-xl border border-border-gray shadow-sm p-6">
+            <section className="bg-white rounded-sm border border-border-gray shadow-sm p-6">
               <h2 className="font-teko text-lg font-bold uppercase tracking-tight text-charcoal mb-3">
                 Player Prop Pick
               </h2>

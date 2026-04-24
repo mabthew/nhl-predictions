@@ -15,7 +15,7 @@ export default function FuturesTable({ futures }: FuturesTableProps) {
   const displayed = showAll ? futures : futures.slice(0, 10);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-border-gray overflow-hidden">
+    <div className="bg-white rounded-sm shadow-sm border border-border-gray overflow-hidden">
       <div className="px-5 py-4 border-b border-border-gray bg-light-gray/50 flex items-center justify-between">
         <div>
           <h3 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal">

@@ -12,7 +12,7 @@ export default function BoxScore({ boxScore }: BoxScoreProps) {
   const isFinal = boxScore.gameState === "OFF" || boxScore.gameState === "FINAL";
 
   return (
-    <div className="bg-white rounded-xl border border-border-gray shadow-sm overflow-hidden">
+    <div className="bg-white rounded-sm border border-border-gray shadow-sm overflow-hidden">
       {/* Header */}
       <div className={`px-5 py-3 flex items-center justify-between ${isLive ? "bg-brand-primary/5 border-b border-brand-primary/30" : "bg-light-gray border-b border-border-gray"}`}>
         <div className="flex items-center gap-2">

@@ -9,7 +9,7 @@ export default function LineCombos({ awayLines, homeLines }: LineCombosProps) {
   if (!awayLines && !homeLines) return null;
 
   return (
-    <section className="bg-white rounded-xl border-l-4 border-purple-500 shadow-sm p-6">
+    <section className="bg-white rounded-sm border border-border-gray shadow-sm p-6">
       <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-1">
         Projected Line Combinations
       </h2>
