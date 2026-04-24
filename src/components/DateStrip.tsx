@@ -58,7 +58,7 @@ export default function DateStrip({ dates, activeDate, onDateSelect }: DateStrip
               key={d.date}
               ref={isActive ? activeRef : undefined}
               onClick={() => onDateSelect(d.date)}
-              className={`flex-none flex flex-col items-center px-4 py-2 rounded-lg transition-colors relative ${
+              className={`flex-none flex flex-col items-center px-4 py-2 rounded-sm transition-colors relative ${
                 d.isToday ? "ring-2 ring-brand-primary" : ""
               } ${
                 isActive

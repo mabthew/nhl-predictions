@@ -326,7 +326,7 @@ export default function MethodologyPage() {
               </div>
             </div>
           </div>
-          <div className="mt-4 p-3 bg-light-gray rounded-lg">
+          <div className="mt-4 p-3 bg-light-gray rounded-sm">
             <p className="text-[11px] text-medium-gray">
               <strong className="text-charcoal">Important distinction:</strong> The line comes from Vegas. The over/under call is ours.
               We use the betting market as a benchmark, then compare it against our own scoring projections from team statistics.

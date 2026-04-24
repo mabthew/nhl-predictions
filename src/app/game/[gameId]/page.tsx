@@ -124,7 +124,7 @@ export default async function GameDetailPage({
         </Link>
 
         {/* Hero Matchup Section */}
-        <div className="rounded-2xl overflow-hidden mb-8 bg-white border border-border-gray relative">
+        <div className="rounded-sm overflow-hidden mb-8 bg-white border border-border-gray relative">
 
           {/* Game meta bar */}
           <div className={`px-6 py-2.5 flex items-center justify-between border-b ${game.gameStatus === "live" ? "bg-brand-primary/5 border-brand-primary/30" : "bg-light-gray border-border-gray"}`}>
@@ -171,7 +171,7 @@ export default async function GameDetailPage({
           {/* 3-column layout */}
           <div className="px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-stretch gap-4 sm:gap-0">
             {/* Away column */}
-            <div className={`flex-1 flex flex-col items-center justify-center gap-3 ${predictedWinner === "away" ? "bg-green-50 rounded-lg p-4 ring-2 ring-green-500" : "p-4"}`}>
+            <div className={`flex-1 flex flex-col items-center justify-center gap-3 ${predictedWinner === "away" ? "bg-green-50 rounded-sm p-4 ring-2 ring-green-500" : "p-4"}`}>
               <div className="flex items-center gap-3">
                 {awayTeam.teamLogo && (
                   <img src={awayTeam.teamLogo} alt={awayTeam.teamAbbrev} className="w-14 h-14" />
@@ -245,7 +245,7 @@ export default async function GameDetailPage({
             </div>
 
             {/* Home column */}
-            <div className={`flex-1 flex flex-col items-center justify-center gap-3 ${predictedWinner === "home" ? "bg-green-50 rounded-lg p-4 ring-2 ring-green-500" : "p-4"}`}>
+            <div className={`flex-1 flex flex-col items-center justify-center gap-3 ${predictedWinner === "home" ? "bg-green-50 rounded-sm p-4 ring-2 ring-green-500" : "p-4"}`}>
               <div className="flex items-center gap-3">
                 {homeTeam.teamLogo && (
                   <img src={homeTeam.teamLogo} alt={homeTeam.teamAbbrev} className="w-14 h-14" />
@@ -383,14 +383,14 @@ export default async function GameDetailPage({
                   Puck Line (Spread)
                 </h2>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-light-gray">
+                  <div className="flex items-center justify-between p-3 rounded-sm bg-light-gray">
                     <span className="font-semibold text-sm text-charcoal">{awayTeam.teamAbbrev}</span>
                     <div className="text-right">
                       <span className="text-lg font-bold text-charcoal">{game.puckLine.awaySpread > 0 ? "+" : ""}{game.puckLine.awaySpread}</span>
                       <span className="text-sm text-medium-gray ml-2">({formatOdds(game.puckLine.awayOdds)})</span>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-light-gray">
+                  <div className="flex items-center justify-between p-3 rounded-sm bg-light-gray">
                     <span className="font-semibold text-sm text-charcoal">{homeTeam.teamAbbrev}</span>
                     <div className="text-right">
                       <span className="text-lg font-bold text-charcoal">{game.puckLine.homeSpread > 0 ? "+" : ""}{game.puckLine.homeSpread}</span>
@@ -496,7 +496,7 @@ function TeamStatCard({ team, side }: { team: TeamMetrics; side: "home" | "away"
   const borderColor = side === "home" ? "border-brand-primary/20" : "border-accent-blue/20";
 
   return (
-    <div className={`rounded-lg border ${borderColor} p-4`}>
+    <div className={`rounded-sm border ${borderColor} p-4`}>
       <div className="flex items-center gap-2 mb-3">
         {team.teamLogo && (
           <img src={team.teamLogo} alt={team.teamAbbrev} className="w-6 h-6" />

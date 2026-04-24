@@ -82,7 +82,7 @@ export default function Header() {
         {/* Mobile: hamburger button */}
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="sm:hidden relative w-10 h-10 flex flex-col items-center justify-center gap-1.5 rounded-lg hover:bg-white/10 transition-colors flex-none"
+          className="sm:hidden relative w-10 h-10 flex flex-col items-center justify-center gap-1.5 rounded-sm hover:bg-white/10 transition-colors flex-none"
           aria-label="Toggle menu"
         >
           <span
@@ -108,21 +108,21 @@ export default function Header() {
           <Link
             href="/"
             onClick={() => setMenuOpen(false)}
-            className="text-sm font-semibold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 px-4 py-2 rounded-lg transition-colors"
+            className="text-sm font-semibold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 px-4 py-2 rounded-sm transition-colors"
           >
             Predictions
           </Link>
           <Link
             href="/history"
             onClick={() => setMenuOpen(false)}
-            className="text-sm font-semibold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 px-4 py-2 rounded-lg transition-colors"
+            className="text-sm font-semibold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 px-4 py-2 rounded-sm transition-colors"
           >
             History
           </Link>
           <Link
             href="/methodology"
             onClick={() => setMenuOpen(false)}
-            className="text-sm font-semibold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 px-4 py-2 rounded-lg transition-colors"
+            className="text-sm font-semibold uppercase tracking-wider text-white/60 hover:text-white hover:bg-white/5 px-4 py-2 rounded-sm transition-colors"
           >
             Methodology
           </Link>

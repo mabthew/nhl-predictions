@@ -76,7 +76,7 @@ export default function AccuracyChart({ data }: AccuracyChartProps) {
           <button
             key={r.label}
             onClick={() => setRange(r.days)}
-            className={`px-3 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+            className={`px-3 py-1 rounded-sm text-[11px] font-semibold uppercase tracking-wider transition-colors ${
               range === r.days
                 ? "bg-charcoal text-white"
                 : "bg-light-gray text-medium-gray hover:bg-border-gray"

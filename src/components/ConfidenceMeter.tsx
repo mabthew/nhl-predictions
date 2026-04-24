@@ -19,9 +19,9 @@ export default function ConfidenceMeter({
 
   return (
     <div className="flex items-center gap-2">
-      <div className={`flex-1 bg-border-gray rounded-full ${height} overflow-hidden`}>
+      <div className={`flex-1 bg-border-gray rounded-none ${height} overflow-hidden`}>
         <div
-          className={`${height} ${color} rounded-full transition-all duration-500`}
+          className={`${height} ${color} rounded-none transition-all duration-500`}
           style={{ width: `${confidence}%` }}
         />
       </div>

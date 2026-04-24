@@ -39,7 +39,7 @@ export default function HistoryTabs({ days }: HistoryTabsProps) {
             <button
               key={day.date}
               onClick={() => setSelectedIndex(i)}
-              className={`flex-none px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors ${
+              className={`flex-none px-4 py-2 rounded-sm text-xs font-semibold uppercase tracking-wider transition-colors ${
                 isActive
                   ? "bg-charcoal text-white"
                   : "bg-white text-medium-gray border border-border-gray hover:bg-light-gray"

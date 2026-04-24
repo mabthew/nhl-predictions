@@ -40,7 +40,7 @@ export default function MetricBar({
         <span className="uppercase tracking-wider">{label}</span>
         <span>{awayLabel ?? format(awayValue)}</span>
       </div>
-      <div className="flex h-2 rounded-full overflow-hidden bg-border-gray">
+      <div className="flex h-2 rounded-none overflow-hidden bg-border-gray">
         <div
           className="bg-brand-primary transition-all duration-500"
           style={{ width: `${homePct}%` }}

@@ -130,9 +130,9 @@ export default function GameCard({ prediction }: GameCardProps) {
               {prediction.puckLine?.confidence != null && (
                 <div className="flex items-center justify-center gap-2 mt-2">
                   <span className="text-[10px] font-mono uppercase tracking-widest text-medium-gray">Spread Confidence</span>
-                  <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
+                  <div className="w-14 h-1.5 bg-white overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${
+                      className={`h-full ${
                         prediction.puckLine.confidence >= 50
                           ? "bg-green-500"
                           : prediction.puckLine.confidence >= 35
@@ -157,8 +157,8 @@ export default function GameCard({ prediction }: GameCardProps) {
               <div className="pt-2 mt-2 border-t border-dashed border-border-gray/60 flex items-center justify-center gap-2">
                 <span className="text-[10px] font-mono uppercase tracking-widest text-medium-gray">Favorite</span>
                 <span className="text-xs font-bold text-charcoal">{winnerAbbrev}</span>
-                <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500 rounded-full" style={{ width: `${winnerConfidence}%` }} />
+                <div className="w-14 h-1.5 bg-white overflow-hidden">
+                  <div className="h-full bg-green-500" style={{ width: `${winnerConfidence}%` }} />
                 </div>
                 <span className="text-[11px] font-bold text-green-600">{winnerConfidence}%</span>
               </div>
@@ -174,8 +174,8 @@ export default function GameCard({ prediction }: GameCardProps) {
                   {winnerAbbrev}
                 </span>
               </div>
-              <div className="h-2.5 bg-white rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${winnerConfidence}%` }} />
+              <div className="h-2.5 bg-white overflow-hidden">
+                <div className="h-full bg-green-500 transition-all" style={{ width: `${winnerConfidence}%` }} />
               </div>
               <p className="text-center text-xs font-bold text-green-600 mt-1.5">{winnerConfidence}% confidence</p>
             </>

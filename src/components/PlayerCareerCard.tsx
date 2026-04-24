@@ -9,7 +9,7 @@ export default function PlayerCareerCard({ profile }: PlayerCareerCardProps) {
   if (recentSeasons.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-lg border border-border-gray/50 p-4">
+    <div className="bg-white rounded-sm border border-border-gray/50 p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
           <p className="text-sm font-bold text-charcoal">{profile.fullName}</p>

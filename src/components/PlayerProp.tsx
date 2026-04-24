@@ -13,7 +13,7 @@ export default function PlayerProp({ prop }: PlayerPropProps) {
   };
 
   return (
-    <div className="bg-light-gray rounded-lg p-3">
+    <div className="bg-light-gray rounded-sm p-3">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-semibold uppercase tracking-wider text-medium-gray">
           Best Player Prop

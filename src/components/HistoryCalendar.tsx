@@ -84,7 +84,7 @@ export default function HistoryCalendar({
             <button
               onClick={prevMonth}
               disabled={!canGoPrev}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-light-gray disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-sm hover:bg-light-gray disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <svg className="w-4 h-4 text-charcoal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -94,7 +94,7 @@ export default function HistoryCalendar({
             <button
               onClick={nextMonth}
               disabled={!canGoNext}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-light-gray disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-sm hover:bg-light-gray disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               <svg className="w-4 h-4 text-charcoal" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -132,7 +132,7 @@ export default function HistoryCalendar({
                   key={day}
                   onClick={() => !isFuture && setSelectedDate(dateStr)}
                   disabled={isFuture}
-                  className={`h-9 rounded-lg text-xs font-semibold relative transition-colors ${
+                  className={`h-9 rounded-sm text-xs font-semibold relative transition-colors ${
                     isSelected
                       ? "bg-charcoal text-white"
                       : isFuture
