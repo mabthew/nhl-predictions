@@ -8,7 +8,9 @@ const TABS = [
   { href: "/admin/models", label: "Models" },
   { href: "/admin/builder", label: "Builder" },
   { href: "/admin/engagement", label: "Engagement" },
+  { href: "/admin/outbound", label: "Outbound" },
   { href: "/admin/costs", label: "Costs" },
+  { href: "/admin/preview", label: "Preview" },
 ];
 
 export default function AdminNav() {

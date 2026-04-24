@@ -2,8 +2,8 @@
 @plugin "@tailwindcss/typography";
 
 @theme inline {
-  --color-espn-red: #e52534;
-  --color-espn-red-dark: #c41e2a;
+  --color-brand-primary: #e11d48;
+  --color-brand-primary-dark: #9f1239;
   --color-charcoal: #232525;
   --color-medium-gray: #5b5e5e;
   --color-light-gray: #f5f5f5;
@@ -57,7 +57,7 @@ body {
 }
 
 .hero-divider {
-  background: linear-gradient(180deg, transparent, rgba(229, 37, 52, 0.3), transparent);
+  background: linear-gradient(180deg, transparent, rgba(225, 29, 72, 0.3), transparent);
 }
 
 
@@ -65,7 +65,7 @@ body {
 .confidence-gradient {
   background: linear-gradient(
     90deg,
-    var(--color-espn-red) 0%,
+    var(--color-brand-primary) 0%,
     #f59e0b 50%,
     #22c55e 100%
   );

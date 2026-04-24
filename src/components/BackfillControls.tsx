@@ -183,7 +183,7 @@ export default function BackfillControls({
           {loading ? (
             <button
               onClick={() => { stopRef.current = true; }}
-              className="bg-espn-red text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-espn-red-dark"
+              className="bg-brand-primary text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-brand-primary-dark"
             >
               Stop After Current Batch
             </button>

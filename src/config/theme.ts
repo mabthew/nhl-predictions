@@ -1,7 +1,7 @@
 export const theme = {
   colors: {
-    espnRed: "#e52534",
-    espnRedDark: "#c41e2a",
+    brandPrimary: "#e11d48",
+    brandPrimaryDark: "#9f1239",
     charcoal: "#232525",
     mediumGray: "#5b5e5e",
     lightGray: "#f5f5f5",

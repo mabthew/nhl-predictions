@@ -32,7 +32,7 @@ export default function ModelSwitcher({
         id="model-select"
         value={currentModelId}
         onChange={handleChange}
-        className="text-sm font-semibold bg-charcoal text-white rounded-lg px-3 py-1.5 border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-espn-red"
+        className="text-sm font-semibold bg-charcoal text-white rounded-lg px-3 py-1.5 border-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary"
       >
         {models.map((m) => (
           <option key={m.id} value={m.id}>

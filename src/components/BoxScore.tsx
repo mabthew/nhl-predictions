@@ -14,15 +14,15 @@ export default function BoxScore({ boxScore }: BoxScoreProps) {
   return (
     <div className="bg-white rounded-xl border border-border-gray shadow-sm overflow-hidden">
       {/* Header */}
-      <div className={`px-5 py-3 flex items-center justify-between ${isLive ? "bg-espn-red/5 border-b border-espn-red/30" : "bg-light-gray border-b border-border-gray"}`}>
+      <div className={`px-5 py-3 flex items-center justify-between ${isLive ? "bg-brand-primary/5 border-b border-brand-primary/30" : "bg-light-gray border-b border-border-gray"}`}>
         <div className="flex items-center gap-2">
-          {isLive && <span className="h-2.5 w-2.5 rounded-full bg-espn-red header-pulse" />}
+          {isLive && <span className="h-2.5 w-2.5 rounded-full bg-brand-primary header-pulse" />}
           <h3 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal">
             {isFinal ? "Final Box Score" : "Live Box Score"}
           </h3>
         </div>
         {isLive && (
-          <span className="text-[11px] font-bold text-espn-red uppercase tracking-wider">
+          <span className="text-[11px] font-bold text-brand-primary uppercase tracking-wider">
             {boxScore.periodLabel} {boxScore.timeRemaining}
           </span>
         )}

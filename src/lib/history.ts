@@ -1,5 +1,5 @@
-import { NHLClubStats } from "./types";
-import { fetchSchedule, fetchStandings, fetchClubStats, fetchTeamStats } from "./nhl-api";
+import { NHLClubStats, BoxScoreData } from "./types";
+import { fetchSchedule, fetchStandings, fetchClubStats, fetchTeamStats, fetchBoxScore } from "./nhl-api";
 import { fetchGameOdds, fetchPlayerProps } from "./odds-api";
 import { fetchInjuries } from "./injuries";
 import { generatePredictions } from "./predictor";
@@ -37,6 +37,70 @@ export interface SyncResult {
   processed: number;
   remaining: number;
   dates: string[];
+}
+
+type BetResult = "WIN" | "LOSS" | "PUSH";
+
+function gradeOverUnder(
+  pick: string,
+  line: number,
+  actual: number
+): { correct: boolean; result: BetResult } {
+  if (actual === line) return { correct: false, result: "PUSH" };
+  if (pick === "OVER") {
+    return actual > line
+      ? { correct: true, result: "WIN" }
+      : { correct: false, result: "LOSS" };
+  }
+  return actual < line
+    ? { correct: true, result: "WIN" }
+    : { correct: false, result: "LOSS" };
+}
+
+/**
+ * Map a prop market label (e.g. "goals", "assists", "shots on goal") to the
+ * corresponding boxscore stat. Returns null if the market isn't supported.
+ */
+function extractPropStat(
+  market: string,
+  boxscore: BoxScoreData,
+  playerName: string
+): number | null {
+  const target = playerName.toLowerCase().trim();
+  const allPlayers = [...boxscore.home.players, ...boxscore.away.players];
+  const player = allPlayers.find((p) => {
+    const full = p.name.toLowerCase();
+    // boxscore names are "F. Lastname" — match on lastname or full
+    const propLast = target.split(" ").slice(-1)[0];
+    return full === target || full.endsWith(propLast) || target.endsWith(full.split(" ").slice(-1)[0]);
+  });
+  if (!player) return null;
+
+  const key = market.toLowerCase();
+  if (key === "goals") return player.goals;
+  if (key === "assists") return player.assists;
+  if (key === "points") return player.points;
+  if (key === "shots on goal" || key === "shots") return player.shots;
+  if (key === "hits") return player.hits;
+  if (key === "blocked shots") return player.blockedShots;
+  return null;
+}
+
+function gradeProp(
+  pick: string | null,
+  line: number | null,
+  actual: number | null
+): { correct: boolean | null; result: BetResult | null } {
+  if (!pick || line === null || actual === null) return { correct: null, result: null };
+  if (actual === line) return { correct: false, result: "PUSH" };
+  if (pick === "OVER") {
+    return actual > line
+      ? { correct: true, result: "WIN" }
+      : { correct: false, result: "LOSS" };
+  }
+  return actual < line
+    ? { correct: true, result: "WIN" }
+    : { correct: false, result: "LOSS" };
 }
 
 /**
@@ -190,6 +254,41 @@ export async function syncHistoryBatch(
           homeScore >= awayScore ? "home" : "away";
         const actualTotal = homeScore + awayScore;
 
+        const ouGrade = gradeOverUnder(
+          pred.overUnder.prediction,
+          pred.overUnder.line,
+          actualTotal
+        );
+
+        // Fetch boxscore + grade prop only when the prediction includes one
+        let propActualValue: number | null = null;
+        let propGrade: { correct: boolean | null; result: BetResult | null } = {
+          correct: null,
+          result: null,
+        };
+        if (pred.playerProp) {
+          try {
+            const boxscore = await fetchBoxScore(pred.gameId);
+            if (boxscore) {
+              propActualValue = extractPropStat(
+                pred.playerProp.market,
+                boxscore,
+                pred.playerProp.playerName
+              );
+              propGrade = gradeProp(
+                pred.playerProp.recommendation,
+                pred.playerProp.line,
+                propActualValue
+              );
+            }
+          } catch (error) {
+            console.error(
+              `Failed to grade prop for game ${pred.gameId}:`,
+              error
+            );
+          }
+        }
+
         await prisma.predictionRecord.upsert({
           where: {
             gameId_gameDate_modelVersion: { gameId: pred.gameId, gameDate: date, modelVersion },
@@ -204,11 +303,11 @@ export async function syncHistoryBatch(
             ouPrediction: pred.overUnder.prediction,
             ouProjectedTotal: pred.overUnder.projectedTotal,
             actualTotal,
-            ouCorrect:
-              (pred.overUnder.prediction === "OVER" &&
-                actualTotal > pred.overUnder.line) ||
-              (pred.overUnder.prediction === "UNDER" &&
-                actualTotal < pred.overUnder.line),
+            ouCorrect: ouGrade.correct,
+            ouResult: ouGrade.result,
+            propActualValue,
+            propCorrect: propGrade.correct,
+            propResult: propGrade.result,
           },
           create: {
             gameId: pred.gameId,
@@ -229,16 +328,16 @@ export async function syncHistoryBatch(
             ouPrediction: pred.overUnder.prediction,
             actualTotal,
             ouProjectedTotal: pred.overUnder.projectedTotal,
-            ouCorrect:
-              (pred.overUnder.prediction === "OVER" &&
-                actualTotal > pred.overUnder.line) ||
-              (pred.overUnder.prediction === "UNDER" &&
-                actualTotal < pred.overUnder.line),
+            ouCorrect: ouGrade.correct,
+            ouResult: ouGrade.result,
             keyFactor: pred.keyFactors[0] ?? null,
             propPlayer: pred.playerProp?.playerName ?? null,
             propMarket: pred.playerProp?.market ?? null,
             propLine: pred.playerProp?.line ?? null,
             propPick: pred.playerProp?.recommendation ?? null,
+            propActualValue,
+            propCorrect: propGrade.correct,
+            propResult: propGrade.result,
             homeGoalsPerGame: pred.homeTeam.goalsForPerGame,
             awayGoalsPerGame: pred.awayTeam.goalsForPerGame,
             modelVersion,

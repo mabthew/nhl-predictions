@@ -134,7 +134,7 @@ export default async function HistoryPage({
 
         {dbAvailable && stats.totalGames > 0 && (
           <div className="bg-charcoal rounded-xl p-6 mb-8 text-white overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-espn-red via-espn-red/80 to-transparent -mt-6 -mx-6 mb-5" />
+            <div className="h-1 bg-gradient-to-r from-brand-primary via-brand-primary/80 to-transparent -mt-6 -mx-6 mb-5" />
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="font-teko text-4xl font-bold leading-none">

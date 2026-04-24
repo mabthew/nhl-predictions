@@ -7,7 +7,7 @@ interface PlayerPropProps {
 
 export default function PlayerProp({ prop }: PlayerPropProps) {
   const riskColors = {
-    HIGH: "bg-espn-red/10 border-espn-red text-espn-red",
+    HIGH: "bg-brand-primary/10 border-brand-primary text-brand-primary",
     MEDIUM: "bg-yellow-500/10 border-yellow-500 text-yellow-600",
     LOW: "bg-green-500/10 border-green-500 text-green-600",
   };
@@ -29,7 +29,7 @@ export default function PlayerProp({ prop }: PlayerPropProps) {
         <span className="text-sm font-bold text-charcoal">
           {prop.playerName}
         </span>
-        <span className="text-sm font-extrabold text-espn-red">
+        <span className="text-sm font-extrabold text-brand-primary">
           {formatOdds(prop.odds)}
         </span>
       </div>

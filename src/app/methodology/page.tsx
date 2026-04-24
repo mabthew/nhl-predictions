@@ -61,7 +61,7 @@ function renderNarrative(text: string, boldPhrase: string) {
   );
 }
 
-function FactorIcon({ icon, className = "w-5 h-5 text-espn-red" }: { icon: string; className?: string }) {
+function FactorIcon({ icon, className = "w-5 h-5 text-brand-primary" }: { icon: string; className?: string }) {
   const props = { className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 1.5 };
   switch (icon) {
     case "goal-diff":
@@ -271,7 +271,7 @@ export default function MethodologyPage() {
           {/* Labels */}
           <div className="flex">
             <div className="flex-1">
-              <p className="text-xs font-bold text-espn-red">50 to 59%</p>
+              <p className="text-xs font-bold text-brand-primary">50 to 59%</p>
               <p className="text-[11px] text-medium-gray">Toss-up</p>
             </div>
             <div className="flex-[1.5] text-center">

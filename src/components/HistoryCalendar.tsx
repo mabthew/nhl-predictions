@@ -147,7 +147,7 @@ export default function HistoryCalendar({
                   {isSynced && !isSelected && accuracy !== undefined && (
                     <span
                       className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
-                        accuracy >= 60 ? "bg-green-500" : accuracy >= 50 ? "bg-yellow-500" : "bg-espn-red"
+                        accuracy >= 60 ? "bg-green-500" : accuracy >= 50 ? "bg-yellow-500" : "bg-brand-primary"
                       }`}
                     />
                   )}
@@ -167,7 +167,7 @@ export default function HistoryCalendar({
               <span className="text-[11px] text-medium-gray">50-59%</span>
             </div>
             <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-espn-red" />
+              <span className="w-1.5 h-1.5 rounded-full bg-brand-primary" />
               <span className="text-[11px] text-medium-gray">&lt;50%</span>
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function HistoryCalendar({
                     className={`font-bold ${
                       selectedDayData.winnerAccuracy >= 60
                         ? "text-green-600"
-                        : "text-espn-red"
+                        : "text-brand-primary"
                     }`}
                   >
                     {selectedDayData.winnerAccuracy}%
@@ -204,7 +204,7 @@ export default function HistoryCalendar({
                     className={`font-bold ${
                       selectedDayData.ouAccuracy >= 60
                         ? "text-green-600"
-                        : "text-espn-red"
+                        : "text-brand-primary"
                     }`}
                   >
                     {selectedDayData.ouAccuracy}%

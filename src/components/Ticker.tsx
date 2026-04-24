@@ -23,8 +23,8 @@ function TickerItem({ game, showDate }: { game: GamePrediction; showDate: boolea
   return (
     <div className="flex-none flex items-center">
       {showDate && (
-        <div className="flex items-center px-4 border-r border-espn-red/40">
-          <span className="text-[11px] font-bold uppercase tracking-widest text-espn-red">
+        <div className="flex items-center px-4 border-r border-brand-primary/40">
+          <span className="text-[11px] font-bold uppercase tracking-widest text-brand-primary">
             {formatTickerDate(game.gameDate)}
           </span>
         </div>
@@ -34,7 +34,7 @@ function TickerItem({ game, showDate }: { game: GamePrediction; showDate: boolea
         className="flex items-center gap-3 px-5 py-1.5 border-r border-medium-gray/60 hover:bg-white/5 transition-colors"
       >
         {isLive && (
-          <span className="h-2 w-2 rounded-full bg-espn-red header-pulse flex-shrink-0" />
+          <span className="h-2 w-2 rounded-full bg-brand-primary header-pulse flex-shrink-0" />
         )}
         <div className="flex items-center gap-1.5">
           <div className="w-5 h-5 flex-shrink-0">
@@ -42,7 +42,7 @@ function TickerItem({ game, showDate }: { game: GamePrediction; showDate: boolea
               <img src={game.awayTeam.teamDarkLogo || game.awayTeam.teamLogo} alt={game.awayTeam.teamAbbrev} className="w-5 h-5" />
             )}
           </div>
-          <span className={`text-sm font-semibold text-white ${game.predictedWinner === "away" ? "underline underline-offset-2 decoration-espn-red" : ""}`}>
+          <span className={`text-sm font-semibold text-white ${game.predictedWinner === "away" ? "underline underline-offset-2 decoration-brand-primary" : ""}`}>
             {game.awayTeam.teamAbbrev}
           </span>
           {isLive && game.liveScore && (
@@ -63,13 +63,13 @@ function TickerItem({ game, showDate }: { game: GamePrediction; showDate: boolea
               <img src={game.homeTeam.teamDarkLogo || game.homeTeam.teamLogo} alt={game.homeTeam.teamAbbrev} className="w-5 h-5" />
             )}
           </div>
-          <span className={`text-sm font-semibold text-white ${game.predictedWinner === "home" ? "underline underline-offset-2 decoration-espn-red" : ""}`}>
+          <span className={`text-sm font-semibold text-white ${game.predictedWinner === "home" ? "underline underline-offset-2 decoration-brand-primary" : ""}`}>
             {game.homeTeam.teamAbbrev}
           </span>
         </div>
         <div className="flex items-center gap-2 ml-1">
           {isLive ? (
-            <span className="text-[11px] text-espn-red font-semibold">{game.liveScore?.periodLabel} {game.liveScore?.timeRemaining}</span>
+            <span className="text-[11px] text-brand-primary font-semibold">{game.liveScore?.periodLabel} {game.liveScore?.timeRemaining}</span>
           ) : (
             <span className="text-[11px] text-white/60">{formatGameTime(game.startTime)}</span>
           )}
@@ -163,7 +163,7 @@ export default function Ticker({ predictions }: TickerProps) {
 
   return (
     <div
-      className="relative z-10 bg-charcoal border-b-2 border-espn-red overflow-hidden isolate"
+      className="relative z-10 bg-charcoal border-b-2 border-brand-primary overflow-hidden isolate"
       onMouseEnter={() => { pausedRef.current = true; }}
       onMouseLeave={() => { pausedRef.current = false; }}
     >

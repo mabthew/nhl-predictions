@@ -15,7 +15,7 @@ export default function ConfidenceMeter({
       ? "bg-green-500"
       : confidence >= 60
         ? "bg-yellow-500"
-        : "bg-espn-red";
+        : "bg-brand-primary";
 
   return (
     <div className="flex items-center gap-2">

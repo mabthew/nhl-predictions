@@ -131,9 +131,9 @@ export default function WeekView({ predictions, bestBets, parlays }: WeekViewPro
               />
 
               {hasLiveGames && (
-                <div className="flex items-start gap-2 bg-espn-red/5 border-l-4 border-espn-red rounded-r-lg px-4 py-3 mb-4">
-                  <span className="h-2.5 w-2.5 rounded-full bg-espn-red header-pulse flex-none mt-0.5" />
-                  <p className="text-xs text-espn-red font-medium">{LIVE_BANNER}</p>
+                <div className="flex items-start gap-2 bg-brand-primary/5 border-l-4 border-brand-primary rounded-r-lg px-4 py-3 mb-4">
+                  <span className="h-2.5 w-2.5 rounded-full bg-brand-primary header-pulse flex-none mt-0.5" />
+                  <p className="text-xs text-brand-primary font-medium">{LIVE_BANNER}</p>
                 </div>
               )}
 

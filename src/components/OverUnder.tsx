@@ -22,7 +22,7 @@ export default function OverUnder({ overUnder }: OverUnderProps) {
       <div className="flex items-center gap-3 mb-2">
         <span
           className={`text-lg font-extrabold ${
-            isOver ? "text-green-600" : "text-espn-red"
+            isOver ? "text-green-600" : "text-brand-primary"
           }`}
         >
           {overUnder.prediction}

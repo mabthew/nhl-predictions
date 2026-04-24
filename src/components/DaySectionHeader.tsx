@@ -17,6 +17,15 @@ function formatSectionDate(dateStr: string): string {
   });
 }
 
+function formatChipDate(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function DaySectionHeader({
   date,
   gameCount,
@@ -25,19 +34,26 @@ export default function DaySectionHeader({
 }: DaySectionHeaderProps) {
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b-2 ${
-        isToday ? "border-espn-red" : "border-border-gray"
+      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b-2 border-dashed ${
+        isToday ? "border-charcoal" : "border-border-gray"
       }`}
     >
-      <div className="flex items-center gap-3">
-        {isToday && (
-          <span className="text-[11px] font-bold uppercase tracking-widest text-espn-red bg-espn-red/10 px-2 py-0.5 rounded">
-            Today
-          </span>
+      <div className="flex items-center gap-3 flex-wrap">
+        {isToday ? (
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 border-2 border-dashed border-charcoal bg-white">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-charcoal">
+              Today
+            </span>
+            <span className="font-teko text-sm tracking-[0.2em] uppercase text-charcoal font-bold">
+              {formatChipDate(date)}
+            </span>
+            <span className="h-2.5 w-2.5 rounded-full bg-brand-primary header-pulse" />
+          </div>
+        ) : (
+          <h3 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal">
+            {formatSectionDate(date)}
+          </h3>
         )}
-        <h3 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal">
-          {formatSectionDate(date)}
-        </h3>
         <span className="text-xs text-medium-gray">
           {gameCount} {gameCount === 1 ? "game" : "games"}
         </span>

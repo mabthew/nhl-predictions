@@ -17,7 +17,7 @@ function FactorItem({ factor }: { factor: string }) {
         className="flex items-center gap-2 w-full text-left hover:bg-light-gray/50 rounded px-1 -mx-1 py-0.5 transition-colors"
         onClick={() => setOpen(!open)}
       >
-        <span className={`text-espn-red flex-none leading-none transition-transform duration-150 ${open ? "rotate-90" : ""} inline-block`}>&#9656;</span>
+        <span className={`text-brand-primary flex-none leading-none transition-transform duration-150 ${open ? "rotate-90" : ""} inline-block`}>&#9656;</span>
         <span className="text-xs text-charcoal flex-1 leading-snug">{factor}</span>
       </button>
       {open && (

@@ -7,7 +7,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
   return (
     <div
       className={`bg-white rounded-xl border-l-4 shadow-sm overflow-hidden ${
-        game.winnerCorrect ? "border-green-500" : "border-espn-red"
+        game.winnerCorrect ? "border-green-500" : "border-brand-primary"
       }`}
     >
       {/* Matchup + Score */}
@@ -46,7 +46,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
             className={`rounded-lg px-3 py-2 text-xs ${
               game.winnerCorrect
                 ? "bg-green-50 text-green-700"
-                : "bg-red-50 text-espn-red"
+                : "bg-red-50 text-brand-primary"
             }`}
           >
             <div className="flex items-center gap-1.5">
@@ -61,7 +61,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
             className={`rounded-lg px-3 py-2 text-xs ${
               game.ouCorrect
                 ? "bg-green-50 text-green-700"
-                : "bg-red-50 text-espn-red"
+                : "bg-red-50 text-brand-primary"
             }`}
           >
             <div className="flex items-center gap-1.5">
@@ -111,7 +111,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
         {/* Key factor */}
         {game.keyFactor && (
           <div className="text-[11px] text-medium-gray italic flex items-start gap-1.5">
-            <span className="text-espn-red mt-px">&#9656;</span>
+            <span className="text-brand-primary mt-px">&#9656;</span>
             {game.keyFactor}
           </div>
         )}

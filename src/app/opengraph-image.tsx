@@ -35,7 +35,7 @@ export default async function OGImage() {
             left: 0,
             right: 0,
             height: 6,
-            background: "#e52534",
+            background: "#e11d48",
           }}
         />
 
@@ -97,15 +97,15 @@ export default async function OGImage() {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ fontSize: 20, color: "#e52534", fontWeight: 700 }}>DAILY PICKS</div>
+            <div style={{ fontSize: 20, color: "#e11d48", fontWeight: 700 }}>DAILY PICKS</div>
           </div>
           <div style={{ width: 1, height: 24, background: "#444" }} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ fontSize: 20, color: "#e52534", fontWeight: 700 }}>PLAYER PROPS</div>
+            <div style={{ fontSize: 20, color: "#e11d48", fontWeight: 700 }}>PLAYER PROPS</div>
           </div>
           <div style={{ width: 1, height: 24, background: "#444" }} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ fontSize: 20, color: "#e52534", fontWeight: 700 }}>OVER / UNDER</div>
+            <div style={{ fontSize: 20, color: "#e11d48", fontWeight: 700 }}>OVER / UNDER</div>
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export default async function OGImage() {
             left: 0,
             right: 0,
             height: 3,
-            background: "linear-gradient(90deg, transparent, #e52534, transparent)",
+            background: "linear-gradient(90deg, transparent, #e11d48, transparent)",
           }}
         />
       </div>

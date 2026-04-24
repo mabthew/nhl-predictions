@@ -11,7 +11,7 @@ export default function Indicator({ above }: { above: boolean }) {
       onMouseEnter={() => setShow(true)}
       onMouseLeave={() => setShow(false)}
     >
-      <span className={`text-base font-bold ${above ? "text-green-400" : "text-espn-red"}`}>
+      <span className={`text-base font-bold ${above ? "text-green-400" : "text-brand-primary"}`}>
         {above ? "✓" : "✕"}
       </span>
       {show && (

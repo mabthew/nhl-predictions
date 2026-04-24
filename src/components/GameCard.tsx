@@ -27,7 +27,7 @@ export default function GameCard({ prediction }: GameCardProps) {
     <div
       id={`game-${prediction.gameId}`}
       className={`bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow scroll-mt-20 ${
-        isLive ? "border-2 border-espn-red/60 ring-1 ring-espn-red/20" : "border border-border-gray"
+        isLive ? "border-2 border-brand-primary/60 ring-1 ring-brand-primary/20" : "border border-border-gray"
       }`}
     >
       {/* Main Card — clicks go to detail page */}
@@ -36,8 +36,8 @@ export default function GameCard({ prediction }: GameCardProps) {
         <div className="px-5 pt-4 pb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {isLive ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-espn-red">
-                <span className="h-2 w-2 rounded-full bg-espn-red header-pulse" />
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-brand-primary">
+                <span className="h-2 w-2 rounded-full bg-brand-primary header-pulse" />
                 LIVE — {prediction.liveScore?.periodLabel} {prediction.liveScore?.timeRemaining}
               </span>
             ) : (
@@ -137,7 +137,7 @@ export default function GameCard({ prediction }: GameCardProps) {
                           ? "bg-green-500"
                           : prediction.puckLine.confidence >= 35
                             ? "bg-yellow-500"
-                            : "bg-espn-red"
+                            : "bg-brand-primary"
                       }`}
                       style={{ width: `${prediction.puckLine.confidence}%` }}
                     />
@@ -147,7 +147,7 @@ export default function GameCard({ prediction }: GameCardProps) {
                       ? "text-green-600"
                       : prediction.puckLine.confidence >= 35
                         ? "text-yellow-600"
-                        : "text-espn-red"
+                        : "text-brand-primary"
                   }`}>
                     {prediction.puckLine.confidence}%
                   </span>

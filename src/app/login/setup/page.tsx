@@ -100,12 +100,12 @@ export default function SetupPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-border-gray px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-espn-red"
+                  className="w-full rounded-lg border border-border-gray px-3 py-2 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   placeholder="you@example.com"
                 />
               </div>
               {error && (
-                <p className="text-sm text-espn-red font-semibold">{error}</p>
+                <p className="text-sm text-brand-primary font-semibold">{error}</p>
               )}
               <button
                 type="submit"
@@ -166,13 +166,13 @@ export default function SetupPage() {
                   onChange={(e) =>
                     setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
                   }
-                  className="w-full rounded-lg border border-border-gray px-3 py-2 text-sm text-charcoal tracking-[0.3em] font-mono focus:outline-none focus:ring-2 focus:ring-espn-red"
+                  className="w-full rounded-lg border border-border-gray px-3 py-2 text-sm text-charcoal tracking-[0.3em] font-mono focus:outline-none focus:ring-2 focus:ring-brand-primary"
                   placeholder="000000"
                   autoFocus
                 />
               </div>
               {error && (
-                <p className="text-sm text-espn-red font-semibold">{error}</p>
+                <p className="text-sm text-brand-primary font-semibold">{error}</p>
               )}
               <button
                 type="submit"
@@ -188,7 +188,7 @@ export default function SetupPage() {
             Already set up?{" "}
             <Link
               href="/login"
-              className="text-espn-red font-semibold hover:underline"
+              className="text-brand-primary font-semibold hover:underline"
             >
               Sign in
             </Link>

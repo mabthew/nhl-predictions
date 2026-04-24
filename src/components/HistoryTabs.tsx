@@ -68,7 +68,7 @@ export default function HistoryTabs({ days }: HistoryTabsProps) {
             className={`text-sm font-bold ${
               selectedDay.winnerAccuracy >= 60
                 ? "text-green-600"
-                : "text-espn-red"
+                : "text-brand-primary"
             }`}
           >
             {selectedDay.winnerAccuracy}%
@@ -80,7 +80,7 @@ export default function HistoryTabs({ days }: HistoryTabsProps) {
           </span>
           <span
             className={`text-sm font-bold ${
-              selectedDay.ouAccuracy >= 60 ? "text-green-600" : "text-espn-red"
+              selectedDay.ouAccuracy >= 60 ? "text-green-600" : "text-brand-primary"
             }`}
           >
             {selectedDay.ouAccuracy}%

@@ -14,7 +14,7 @@ export default function Header() {
         className="absolute left-0 top-0 bottom-0 z-0"
         style={{
           width: "max(45px, 3%)",
-          background: "linear-gradient(160deg, #e52534 0%, #c41e2a 100%)",
+          background: "linear-gradient(160deg, #e11d48 0%, #9f1239 100%)",
           clipPath: "polygon(0 0, 100% 0, 40% 100%, 0 100%)",
         }}
       />
@@ -130,7 +130,7 @@ export default function Header() {
       </div>
 
       {/* Bottom accent — thick red bar like ESPN */}
-      <div className="h-1 bg-gradient-to-r from-espn-red via-espn-red to-espn-red-dark" />
+      <div className="h-1 bg-gradient-to-r from-brand-primary via-brand-primary to-brand-primary-dark" />
     </header>
   );
 }

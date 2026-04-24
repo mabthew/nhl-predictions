@@ -127,12 +127,12 @@ export default async function GameDetailPage({
         <div className="rounded-2xl overflow-hidden mb-8 bg-white border border-border-gray relative">
 
           {/* Game meta bar */}
-          <div className={`px-6 py-2.5 flex items-center justify-between border-b ${game.gameStatus === "live" ? "bg-espn-red/5 border-espn-red/30" : "bg-light-gray border-border-gray"}`}>
+          <div className={`px-6 py-2.5 flex items-center justify-between border-b ${game.gameStatus === "live" ? "bg-brand-primary/5 border-brand-primary/30" : "bg-light-gray border-border-gray"}`}>
             <div className="flex items-center gap-2">
               {game.gameStatus === "live" && (
-                <span className="h-2.5 w-2.5 rounded-full bg-espn-red header-pulse" />
+                <span className="h-2.5 w-2.5 rounded-full bg-brand-primary header-pulse" />
               )}
-              <span className={`text-[11px] font-bold uppercase tracking-widest ${game.gameStatus === "live" ? "text-espn-red" : "text-charcoal"}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-widest ${game.gameStatus === "live" ? "text-brand-primary" : "text-charcoal"}`}>
                 {game.gameStatus === "live" ? "LIVE" : ""} {awayTeam.teamAbbrev} @ {homeTeam.teamAbbrev} &middot; {formatDate(game.gameDate)}
               </span>
             </div>
@@ -199,7 +199,7 @@ export default async function GameDetailPage({
             {/* Center — puck line (primary) + winner pick (secondary) */}
             <div className="flex flex-col items-center justify-center px-2 sm:px-10 sm:min-w-[220px] py-2 sm:py-0 border-y sm:border-y-0 border-border-gray/50">
               {game.gameStatus === "live" && (
-                <span className="text-[10px] font-bold uppercase tracking-widest text-espn-red mb-1">Pre-Game Analysis</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-brand-primary mb-1">Pre-Game Analysis</span>
               )}
               {game.puckLine ? (
                 <>
@@ -286,13 +286,13 @@ export default async function GameDetailPage({
           <div className="lg:col-span-2 space-y-6">
 
             {/* Matchup Breakdown */}
-            <section className="bg-white rounded-xl border-l-4 border-espn-red shadow-sm p-6">
+            <section className="bg-white rounded-xl border-l-4 border-brand-primary shadow-sm p-6">
               <h2 className="font-teko text-xl font-bold uppercase tracking-tight text-charcoal mb-4">
                 Matchup Breakdown
               </h2>
               <div className="flex items-center justify-between mb-4 text-xs font-semibold uppercase tracking-wider">
                 <span className="text-accent-blue">{awayTeam.teamAbbrev} (Away)</span>
-                <span className="text-espn-red">{homeTeam.teamAbbrev} (Home)</span>
+                <span className="text-brand-primary">{homeTeam.teamAbbrev} (Home)</span>
               </div>
               <div className="space-y-1">
                 <MetricBar label="Shots For Per Game" homeValue={homeTeam.shotsForPerGame} awayValue={awayTeam.shotsForPerGame} format={(v) => v.toFixed(1)} />
@@ -358,7 +358,7 @@ export default async function GameDetailPage({
                     <span className="text-sm font-bold text-charcoal">{homeTeam.compositeScore.toFixed(1)}</span>
                   </div>
                   <div className="h-4 bg-border-gray rounded-full overflow-hidden">
-                    <div className="h-full bg-espn-red rounded-full transition-all duration-500" style={{ width: `${Math.min(100, homeTeam.compositeScore)}%` }} />
+                    <div className="h-full bg-brand-primary rounded-full transition-all duration-500" style={{ width: `${Math.min(100, homeTeam.compositeScore)}%` }} />
                   </div>
                 </div>
               </div>
@@ -410,7 +410,7 @@ export default async function GameDetailPage({
                             ? "bg-green-500"
                             : game.puckLine.confidence >= 35
                               ? "bg-yellow-500"
-                              : "bg-espn-red"
+                              : "bg-brand-primary"
                         }`}
                         style={{ width: `${game.puckLine.confidence}%` }}
                       />
@@ -420,7 +420,7 @@ export default async function GameDetailPage({
                         ? "text-green-600"
                         : game.puckLine.confidence >= 35
                           ? "text-yellow-600"
-                          : "text-espn-red"
+                          : "text-brand-primary"
                     }`}>
                       {game.puckLine.confidence}%
                     </span>
@@ -441,7 +441,7 @@ export default async function GameDetailPage({
                 <span className={`text-xs font-bold uppercase px-2.5 py-1 rounded-full ${
                   game.overUnder.prediction === "OVER"
                     ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-espn-red"
+                    : "bg-red-100 text-brand-primary"
                 }`}>
                   {game.overUnder.prediction}
                 </span>
@@ -492,8 +492,8 @@ export default async function GameDetailPage({
 }
 
 function TeamStatCard({ team, side }: { team: TeamMetrics; side: "home" | "away" }) {
-  const accentColor = side === "home" ? "text-espn-red" : "text-accent-blue";
-  const borderColor = side === "home" ? "border-espn-red/20" : "border-accent-blue/20";
+  const accentColor = side === "home" ? "text-brand-primary" : "text-accent-blue";
+  const borderColor = side === "home" ? "border-brand-primary/20" : "border-accent-blue/20";
 
   return (
     <div className={`rounded-lg border ${borderColor} p-4`}>

@@ -50,7 +50,7 @@ export default function PlayerCareerCard({ profile }: PlayerCareerCardProps) {
               <td className="text-center px-1 text-charcoal font-bold">{season.goals}</td>
               <td className="text-center px-1 text-charcoal font-bold">{season.assists}</td>
               <td className="text-center px-1 text-charcoal font-bold">{season.points}</td>
-              <td className={`text-center px-1 ${season.plusMinus > 0 ? "text-green-600" : season.plusMinus < 0 ? "text-espn-red" : "text-medium-gray"}`}>
+              <td className={`text-center px-1 ${season.plusMinus > 0 ? "text-green-600" : season.plusMinus < 0 ? "text-brand-primary" : "text-medium-gray"}`}>
                 {season.plusMinus > 0 ? "+" : ""}{season.plusMinus}
               </td>
               <td className="text-center px-1 text-medium-gray">{season.powerPlayGoals}</td>
@@ -84,7 +84,7 @@ function TrendIndicator({ seasons }: { seasons: PlayerProfile["recentSeasons"] }
 
   const isUp = diff > 0;
   return (
-    <span className={`text-[11px] font-medium ${isUp ? "text-green-600" : "text-espn-red"}`}>
+    <span className={`text-[11px] font-medium ${isUp ? "text-green-600" : "text-brand-primary"}`}>
       {isUp ? "\u25B2" : "\u25BC"} {Math.abs(diff).toFixed(2)} P/GP vs last season
     </span>
   );

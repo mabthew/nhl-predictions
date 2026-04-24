@@ -68,7 +68,7 @@ export default async function OGImage({
             left: 0,
             right: 0,
             height: 6,
-            background: "#e52534",
+            background: "#e11d48",
           }}
         />
 
@@ -76,7 +76,7 @@ export default async function OGImage({
         <div
           style={{
             fontSize: 24,
-            color: "#e52534",
+            color: "#e11d48",
             fontWeight: 700,
             letterSpacing: "4px",
             textTransform: "uppercase",
@@ -165,7 +165,7 @@ export default async function OGImage({
             left: 0,
             right: 0,
             height: 3,
-            background: "linear-gradient(90deg, transparent, #e52534, transparent)",
+            background: "linear-gradient(90deg, transparent, #e11d48, transparent)",
           }}
         />
       </div>

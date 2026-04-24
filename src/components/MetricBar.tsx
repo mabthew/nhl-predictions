@@ -42,7 +42,7 @@ export default function MetricBar({
       </div>
       <div className="flex h-2 rounded-full overflow-hidden bg-border-gray">
         <div
-          className="bg-espn-red transition-all duration-500"
+          className="bg-brand-primary transition-all duration-500"
           style={{ width: `${homePct}%` }}
         />
         <div
