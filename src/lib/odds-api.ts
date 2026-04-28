@@ -24,36 +24,36 @@ function getActiveKey(): string | null {
 }
 
 async function oddsApiFetch(url: string, cacheDuration = 900): Promise<Response | null> {
-  let key = getActiveKey();
-  if (!key) return null;
+  const free = process.env.ODDS_API_KEY;
+  const paid = process.env.ODDS_API_KEY_PAID;
+  const firstKey = free && !freeKeyExhausted ? free : paid;
+  if (!firstKey) return null;
 
   const endpoint = extractEndpoint(url);
   const start = Date.now();
+  const usingFree = firstKey === free;
 
-  const res = await fetch(url.replace("__API_KEY__", key), {
+  const res = await fetch(url.replace("__API_KEY__", firstKey), {
     next: { revalidate: cacheDuration },
   });
 
   const elapsed = Date.now() - start;
   logApiCall("odds-api", endpoint, res.status, elapsed).catch(() => {});
 
-  // Check if free key is exhausted
   const remaining = res.headers.get("x-requests-remaining");
-  if (remaining !== null && parseInt(remaining) <= 0 && !freeKeyExhausted) {
+  if (usingFree && remaining !== null && parseInt(remaining) <= 0) {
     freeKeyExhausted = true;
-    console.log("Free Odds API key exhausted, switching to paid key");
   }
 
-  if (res.status === 401 || res.status === 429) {
-    const paid = process.env.ODDS_API_KEY_PAID;
-    if (paid && !freeKeyExhausted) {
-      freeKeyExhausted = true;
-      console.log("Free Odds API key failed, switching to paid key");
-      const retryRes = await fetch(url.replace("__API_KEY__", paid), {
-        next: { revalidate: cacheDuration },
-      });
-      if (retryRes.ok) return retryRes;
-    }
+  // Free key exhausted or rejected: retry with paid key. We must not gate the
+  // retry on `freeKeyExhausted` because the same response that exhausts the
+  // free key also triggers the 401 we need to recover from.
+  if (usingFree && paid && (res.status === 401 || res.status === 429 || freeKeyExhausted)) {
+    freeKeyExhausted = true;
+    const retryRes = await fetch(url.replace("__API_KEY__", paid), {
+      next: { revalidate: cacheDuration },
+    });
+    if (retryRes.ok) return retryRes;
     return null;
   }
 

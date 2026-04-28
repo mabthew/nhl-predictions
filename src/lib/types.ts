@@ -241,7 +241,9 @@ export interface PuckLine {
   homeOdds: number;
   awaySpread: number;
   awayOdds: number;
-  confidence?: number; // 15-85, how likely the favorite covers -1.5
+  // 15-85, probability the listed favorite covers -1.5.
+  // Below 50 implies the underdog +1.5 is the value side.
+  favoriteCoverProbability?: number;
 }
 
 export interface Moneyline {
