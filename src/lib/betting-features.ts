@@ -69,27 +69,29 @@ function getCandidateBets(pred: GamePrediction): CandidateBet[] {
     });
   }
 
-  // Puck line
-  if (pred.puckLine?.confidence) {
-    const plOdds = pred.predictedWinner === "home"
-      ? pred.puckLine.homeOdds
-      : pred.puckLine.awayOdds;
-    const plSpread = pred.predictedWinner === "home"
-      ? pred.puckLine.homeSpread
-      : pred.puckLine.awaySpread;
+  // Puck line — flip to underdog +1.5 when favorite cover probability < 50%
+  if (pred.puckLine?.favoriteCoverProbability) {
+    const favCovers = pred.puckLine.favoriteCoverProbability;
+    const flip = favCovers < 50;
+    const favoriteIsHome = pred.puckLine.homeSpread < 0;
+    const pickIsHome = flip ? !favoriteIsHome : favoriteIsHome;
+    const plOdds = pickIsHome ? pred.puckLine.homeOdds : pred.puckLine.awayOdds;
+    const plSpread = pickIsHome ? pred.puckLine.homeSpread : pred.puckLine.awaySpread;
+    const pickAbbrev = pickIsHome ? pred.homeTeam.teamAbbrev : pred.awayTeam.teamAbbrev;
+    const confidence = flip ? 100 - favCovers : favCovers;
     const impliedProb = americanToImpliedProbability(plOdds);
-    const edge = pred.puckLine.confidence / 100 - impliedProb;
+    const edge = confidence / 100 - impliedProb;
     candidates.push({
       gameId: pred.gameId,
       betType: "puck_line",
-      description: `${winnerAbbrev} ${plSpread > 0 ? "+" : ""}${plSpread}`,
-      confidence: pred.puckLine.confidence,
+      description: `${pickAbbrev} ${plSpread > 0 ? "+" : ""}${plSpread}`,
+      confidence,
       odds: plOdds,
       impliedProbability: impliedProb,
       edge,
-      score: scoreBet(pred.puckLine.confidence, plOdds),
+      score: scoreBet(confidence, plOdds),
       gameLabel: label,
-      teamAbbrev: winnerAbbrev,
+      teamAbbrev: pickAbbrev,
     });
   }
 

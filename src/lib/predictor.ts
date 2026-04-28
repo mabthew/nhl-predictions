@@ -231,12 +231,12 @@ export function generatePredictions(
         // Predicted winner has -1.5: must win by 2+, harder than just winning
         const favoriteOdds = predictedWinner === "home" ? puckLine.homeOdds : puckLine.awayOdds;
         const impliedProb = americanToImpliedProbability(favoriteOdds);
-        puckLine.confidence = Math.round(clamp((winnerConfidence / 100) * impliedProb * 100, 15, 85));
+        puckLine.favoriteCoverProbability = Math.round(clamp((winnerConfidence / 100) * impliedProb * 100, 15, 85));
       } else {
         // Predicted winner is underdog (+1.5): covers by winning or losing by 1
         const underdogOdds = predictedWinner === "home" ? puckLine.homeOdds : puckLine.awayOdds;
         const impliedProb = americanToImpliedProbability(underdogOdds);
-        puckLine.confidence = Math.round(clamp(
+        puckLine.favoriteCoverProbability = Math.round(clamp(
           winnerConfidence + (1 - winnerConfidence / 100) * impliedProb * 50,
           15, 85
         ));
