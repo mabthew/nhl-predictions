@@ -120,7 +120,7 @@ export default function HistoryGameCard({ game }: { game: HistoryGame }) {
         {game.propPlayer && (
           <div className="text-[11px] flex items-center gap-1.5">
             <span className="bg-charcoal text-white text-[11px] font-bold uppercase px-1.5 py-0.5 rounded">
-              Prop
+              Player Prop
             </span>
             <span className="text-medium-gray">
               {game.propPlayer}{" "}

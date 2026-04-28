@@ -28,11 +28,15 @@ model PredictionRecord {
   ouProjectedTotal Float?
   actualTotal      Int
   ouCorrect        Boolean
+  ouResult         String?
   keyFactor        String?
   propPlayer       String?
   propMarket       String?
   propLine         Float?
   propPick         String?
+  propActualValue  Float?
+  propCorrect      Boolean?
+  propResult       String?
   homeGoalsPerGame Float?
   awayGoalsPerGame Float?
   modelVersion     String   @default("v2")

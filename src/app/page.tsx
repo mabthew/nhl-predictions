@@ -5,6 +5,7 @@ import TimeAgo from "@/components/TimeAgo";
 import Ticker from "@/components/Ticker";
 import WeekView from "@/components/WeekView";
 import FuturesTable from "@/components/FuturesTable";
+import SeasonRecordCard from "@/components/SeasonRecordCard";
 import { getPredictions } from "@/lib/get-predictions";
 
 export const metadata: Metadata = {
@@ -35,6 +36,8 @@ export default async function Home() {
       )}
 
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8">
+        <SeasonRecordCard />
+
         {data && (
           <div className="mb-6">
             <div className="flex items-center gap-3">

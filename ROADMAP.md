@@ -16,6 +16,7 @@
 
 ## Paid Feeds Infrastructure
 
+- **Inline feed activation** - Add toggle buttons next to inactive feeds so they can be activated directly from the model builder without accessing the database
 - **Admin feed management UI** - Toggle feeds on/off from the dashboard instead of raw DB updates
 - **Per-feed accuracy tracking** - Measure how much each paid feed actually improves predictions vs baseline
 - **Feed cost breakdown on costs page** - Show per-feed daily/monthly spend from ApiUsageLog
@@ -59,3 +60,39 @@
 
 - **X/Twitter presence** - Build a voice and posting cadence, engage with hockey betting community (@odybrownbets, @spittinchiclets)
 - **Instagram** - Visual game cards and pick summaries for Instagram stories and posts
+
+## Content Hub
+
+- **Author identity system** - Lightweight `Author` model (handle, displayName, avatarUrl, kind: human or bot, bio). Seed two authors to start: your personal handle and `@botANALysis`. Defer public user accounts to the paywall milestone.
+- **Article CMS** - `Article` model (authorId, slug, title, body markdown, status draft or published, publishedAt, coverImage, tags). Admin editor at `/admin/articles`. Public list at `/analysis` and detail at `/analysis/[slug]`.
+- **Bot analyst pipeline (@botANALysis)** - RSS-based scraper pulls NHL headlines from a curated source list, sends scrape plus current-day model picks to Claude (reuse `@anthropic-ai/claude-agent-sdk`), writes a draft Article authored by the bot. Admin reviews in `/admin/articles` and publishes. Runs on a cron at 7 AM and 5 PM ET to match the existing daily cycle.
+- **Voice guardrails** - Enforce the voice rules from AGENTS.md and memory in the bot prompt: direct and knowledgeable tone, no emdashes, no acronyms, full stat and team names.
+
+## Season Record Expansion
+
+- **Closing line value per category** - Tie the CLV work already on this roadmap to the new season record card so each row (spread, over/under, player props) carries a CLV column.
+- **All-time vs current season toggle** - Switch between the current season and lifetime record on the homepage card.
+- **Per-model record breakdown** - Surface the active model's record alongside the ensemble so readers see whether the current build is keeping pace.
+
+## Affiliate and Partner Infrastructure
+
+- **Partner model** - `Partner` Prisma model (name, logo, slug, utmSource, revenueShareBps, notes).
+- **Outbound attribution** - Extend `EngagementEvent.metadata` or add a dedicated `OutboundClick` model once volume justifies it. Capture partner, campaign, and placement for every click.
+- **Partner landing links** - `/go/[partner]` server route that records the click server-side and redirects to the partner URL with the correct UTM parameters. Safer than client-side tracking because ad blockers cannot strip it.
+- **Revenue reconciliation** - Admin dashboard that reconciles clicks to conversions once partners send back reports (weekly CSV to start).
+
+## Social Auto-Posting
+
+- **SocialPost model** - (platform, content, scheduledFor, postedAt, externalId, articleId). Used to prevent duplicate posts and to track what went out.
+- **Poster cron** - `src/app/api/cron/social/route.ts`. Pulls the day's top pick and any newly published article, posts to X first via the Twitter API v2. Instagram and Discord follow once the X pipeline is stable.
+- **Secrets** - Add `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` to Vercel env.
+
+## Multi-Sport (Degen Sports umbrella)
+
+- **Sport abstraction** - Add `sport` column to `PredictionRecord`, `OddsCache`, `DataFeed`, `ModelConfig`, `FeedCache`. Parameterize API route paths: `/api/[sport]/predictions`, `/api/[sport]/record`, etc.
+- **League configuration layer** - Per-sport `leagueAverages`, `leagueSd`, and stat-type whitelists in a config module instead of the hardcoded NHL constants currently in `src/lib/predictor.ts`.
+- **SportAdapter interface** - Factor `src/lib/nhl-api.ts` behind a `SportAdapter` contract so NFL and NBA adapters slot in without touching the core predictor or history sync.
+- **Umbrella site** - `degensports.com` renders the parent brand and sport sub-brands (DegeNHL, DegeNFL, DegeNBA) render from shared components with sport-specific data.
+- **Consumer auth** - Add Clerk via the Vercel Marketplace (fits the existing Vercel stack cleanly). Keeps admin TOTP separate from public user accounts.
+- **Paywall and packaging** - Stripe for subscriptions. Packages are a la carte per sport; 2-sport and 3-sport bundles unlock progressively better pricing.
+- **Build order** - (1) refactor NHL onto the Sport abstraction, (2) ship consumer auth plus paywall on NHL alone, (3) clone for NFL in time for September, (4) NBA follows NFL.
