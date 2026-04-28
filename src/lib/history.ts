@@ -104,6 +104,77 @@ function gradeProp(
 }
 
 /**
+ * Grade any prop pick stored on a completed game that doesn't yet have a result.
+ *
+ * Runs over existing PredictionRecord rows (independent of current odds), reads
+ * the originally-stored propPlayer/propMarket/propLine/propPick, fetches the
+ * boxscore, and writes propActualValue/propCorrect/propResult.
+ */
+export async function settlePendingProps(
+  options?: { limit?: number; modelVersion?: string }
+): Promise<{ graded: number; skipped: number; remaining: number }> {
+  const modelVersion = options?.modelVersion ?? MODEL_VERSION;
+  const limit = options?.limit ?? 200;
+
+  const pending = await prisma.predictionRecord.findMany({
+    where: {
+      modelVersion,
+      gameId: { not: 0 },
+      propPick: { not: null },
+      propResult: null,
+    },
+    orderBy: { gameDate: "desc" },
+    take: limit,
+  });
+
+  let graded = 0;
+  let skipped = 0;
+
+  for (const row of pending) {
+    if (!row.propPick || row.propLine === null || !row.propMarket || !row.propPlayer) {
+      skipped++;
+      continue;
+    }
+    try {
+      const boxscore = await fetchBoxScore(row.gameId);
+      if (!boxscore) {
+        skipped++;
+        continue;
+      }
+      const actual = extractPropStat(row.propMarket, boxscore, row.propPlayer);
+      const grade = gradeProp(row.propPick, row.propLine, actual);
+      if (grade.result === null) {
+        skipped++;
+        continue;
+      }
+      await prisma.predictionRecord.update({
+        where: { id: row.id },
+        data: {
+          propActualValue: actual,
+          propCorrect: grade.correct,
+          propResult: grade.result,
+        },
+      });
+      graded++;
+    } catch (error) {
+      console.error(`Failed to settle prop for game ${row.gameId}:`, error);
+      skipped++;
+    }
+  }
+
+  const remaining = await prisma.predictionRecord.count({
+    where: {
+      modelVersion,
+      gameId: { not: 0 },
+      propPick: { not: null },
+      propResult: null,
+    },
+  });
+
+  return { graded, skipped, remaining };
+}
+
+/**
  * Sync history incrementally — processes up to batchSize unsyced dates per call.
  * Returns the number of dates that still need syncing.
  */
