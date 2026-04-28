@@ -105,82 +105,87 @@ export default function GameCard({ prediction }: GameCardProps) {
         )}
 
         {/* Pick zone — visually distinct */}
-        <div className={`mx-4 mb-3 rounded-lg px-4 py-3.5 ${isLive ? "bg-light-gray/50 border border-border-gray" : "bg-light-gray/70"}`}>
-          {/* Puck Line — primary pick */}
-          {prediction.puckLine ? (
-            <>
-              <div className="flex items-center justify-center gap-6 mb-2">
-                <div className="text-center">
-                  <span className="font-teko text-xl font-bold leading-none" style={{ color: TEAM_COLORS[awayTeam.teamAbbrev] ?? "#232525" }}>
-                    {prediction.puckLine.awaySpread > 0 ? "+" : ""}{prediction.puckLine.awaySpread}
-                  </span>
-                  <span className="text-xs font-bold text-charcoal ml-1">({formatOdds(prediction.puckLine.awayOdds)})</span>
-                </div>
-                <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">
-                  {isLive ? "Pre-Game PL" : "Puck Line"}
-                </span>
-                <div className="text-center">
-                  <span className="font-teko text-xl font-bold leading-none" style={{ color: TEAM_COLORS[homeTeam.teamAbbrev] ?? "#232525" }}>
-                    {prediction.puckLine.homeSpread > 0 ? "+" : ""}{prediction.puckLine.homeSpread}
-                  </span>
-                  <span className="text-xs font-bold text-charcoal ml-1">({formatOdds(prediction.puckLine.homeOdds)})</span>
-                </div>
-              </div>
-              {/* Spread confidence */}
-              {prediction.puckLine?.confidence != null && (
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Spread Confidence</span>
-                  <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${
-                        prediction.puckLine.confidence >= 50
-                          ? "bg-green-500"
-                          : prediction.puckLine.confidence >= 35
-                            ? "bg-yellow-500"
-                            : "bg-espn-red"
-                      }`}
-                      style={{ width: `${prediction.puckLine.confidence}%` }}
-                    />
+        {(() => {
+          const puckLine = prediction.puckLine;
+          const favCovers = puckLine?.favoriteCoverProbability;
+          const flip = favCovers != null && favCovers < 50;
+          const favoriteIsHome = puckLine ? puckLine.homeSpread < 0 : predictedWinner === "home";
+          const spreadPickIsHome = puckLine
+            ? (flip ? !favoriteIsHome : favoriteIsHome)
+            : predictedWinner === "home";
+          const spreadPickTeam = spreadPickIsHome ? homeTeam.teamAbbrev : awayTeam.teamAbbrev;
+          const spreadPickLine = flip ? "+1.5" : "-1.5";
+          const spreadPickConfidence = favCovers != null
+            ? (flip ? 100 - favCovers : favCovers)
+            : null;
+
+          return (
+            <div className={`mx-4 mb-3 rounded-lg px-4 py-3.5 ${isLive ? "bg-light-gray/50 border border-border-gray" : "bg-light-gray/70"}`}>
+              {/* Puck line — only show when books have posted lines. NHL spreads
+                  often aren't posted until 24-48h before puck drop because goalie
+                  starts (the dominant pricing variable) aren't confirmed earlier. */}
+              {puckLine && (
+                <>
+                  <div className="flex items-center justify-center gap-6 mb-2">
+                    <div className="text-center">
+                      <span className="font-teko text-xl font-bold leading-none" style={{ color: TEAM_COLORS[awayTeam.teamAbbrev] ?? "#232525" }}>
+                        {puckLine.awaySpread > 0 ? "+" : ""}{puckLine.awaySpread}
+                      </span>
+                      <span className="text-xs font-bold text-charcoal ml-1">({formatOdds(puckLine.awayOdds)})</span>
+                    </div>
+                    <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">
+                      {isLive ? "Pre-Game PL" : "Puck Line"}
+                    </span>
+                    <div className="text-center">
+                      <span className="font-teko text-xl font-bold leading-none" style={{ color: TEAM_COLORS[homeTeam.teamAbbrev] ?? "#232525" }}>
+                        {puckLine.homeSpread > 0 ? "+" : ""}{puckLine.homeSpread}
+                      </span>
+                      <span className="text-xs font-bold text-charcoal ml-1">({formatOdds(puckLine.homeOdds)})</span>
+                    </div>
                   </div>
-                  <span className={`text-[11px] font-bold ${
-                    prediction.puckLine.confidence >= 50
-                      ? "text-green-600"
-                      : prediction.puckLine.confidence >= 35
-                        ? "text-yellow-600"
-                        : "text-espn-red"
-                  }`}>
-                    {prediction.puckLine.confidence}%
-                  </span>
-                </div>
+
+                  {spreadPickConfidence != null && (
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Spread Pick</span>
+                      <span className="text-xs font-bold text-charcoal">{spreadPickTeam} {spreadPickLine}</span>
+                      <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            spreadPickConfidence >= 65
+                              ? "bg-green-500"
+                              : spreadPickConfidence >= 55
+                                ? "bg-yellow-500"
+                                : "bg-espn-red"
+                          }`}
+                          style={{ width: `${spreadPickConfidence}%` }}
+                        />
+                      </div>
+                      <span className={`text-[11px] font-bold ${
+                        spreadPickConfidence >= 65
+                          ? "text-green-600"
+                          : spreadPickConfidence >= 55
+                            ? "text-yellow-600"
+                            : "text-espn-red"
+                      }`}>
+                        {spreadPickConfidence}%
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
-              {/* Winner pick */}
-              <div className="pt-2 mt-2 border-t border-border-gray/40 flex items-center justify-center gap-2">
-                <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Favorite</span>
+
+              {/* Moneyline winner pick — always renders since it's model-only */}
+              <div className={`flex items-center justify-center gap-2 ${puckLine ? "pt-2 mt-2 border-t border-border-gray/40" : ""}`}>
+                <span className="text-[10px] uppercase tracking-widest text-medium-gray font-bold">Moneyline</span>
                 <span className="text-xs font-bold text-charcoal">{winnerAbbrev}</span>
                 <div className="w-14 h-1.5 bg-white rounded-full overflow-hidden">
                   <div className="h-full bg-green-500 rounded-full" style={{ width: `${winnerConfidence}%` }} />
                 </div>
                 <span className="text-[11px] font-bold text-green-600">{winnerConfidence}%</span>
               </div>
-            </>
-          ) : (
-            /* Fallback when no puck line data */
-            <>
-              <div className="flex flex-col items-center mb-2">
-                <span className="text-[11px] uppercase tracking-widest text-medium-gray font-bold">
-                  {isLive ? "Pre-Game Pick" : "Our Pick"}
-                </span>
-                <span className="font-teko text-3xl font-bold leading-none text-charcoal">
-                  {winnerAbbrev}
-                </span>
-              </div>
-              <div className="h-2.5 bg-white rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${winnerConfidence}%` }} />
-              </div>
-              <p className="text-center text-xs font-bold text-green-600 mt-1.5">{winnerConfidence}% confidence</p>
-            </>
-          )}
-        </div>
+            </div>
+          );
+        })()}
 
       </Link>
 

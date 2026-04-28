@@ -13,24 +13,35 @@ function getVisitorId(): string {
   return id;
 }
 
-function track(event: string, page: string, metadata?: Record<string, string>) {
+function track(
+  event: string,
+  page: string,
+  referrer?: string,
+  metadata?: Record<string, string>
+) {
   const visitorId = getVisitorId();
   if (!visitorId) return;
   fetch("/api/track", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ event, page, visitorId, metadata }),
+    body: JSON.stringify({ event, page, visitorId, referrer, metadata }),
   }).catch(() => {});
 }
 
 export default function EngagementTracker() {
   const pathname = usePathname();
   const lastPath = useRef("");
+  const sentInitial = useRef(false);
 
   useEffect(() => {
     if (pathname === lastPath.current) return;
     lastPath.current = pathname;
-    track("page_view", pathname);
+    const referrer =
+      !sentInitial.current && typeof document !== "undefined"
+        ? document.referrer || undefined
+        : undefined;
+    sentInitial.current = true;
+    track("page_view", pathname, referrer);
   }, [pathname]);
 
   return null;

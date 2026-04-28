@@ -5,10 +5,10 @@ import { Parlay } from "@/lib/types";
 import { formatOdds } from "@/lib/utils";
 
 const BET_TYPE_LABELS: Record<string, string> = {
-  moneyline: "ML",
-  puck_line: "PL",
-  over_under: "O/U",
-  player_prop: "Prop",
+  moneyline: "Moneyline",
+  puck_line: "Puck Line",
+  over_under: "Over/Under",
+  player_prop: "Player Prop",
 };
 
 interface ParlayCardProps {

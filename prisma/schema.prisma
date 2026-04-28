@@ -28,11 +28,15 @@ model PredictionRecord {
   ouProjectedTotal Float?
   actualTotal      Int
   ouCorrect        Boolean
+  ouResult         String?
   keyFactor        String?
   propPlayer       String?
   propMarket       String?
   propLine         Float?
   propPick         String?
+  propActualValue  Float?
+  propCorrect      Boolean?
+  propResult       String?
   homeGoalsPerGame Float?
   awayGoalsPerGame Float?
   modelVersion     String   @default("v2")
@@ -94,16 +98,23 @@ model OddsSnapshot {
 }
 
 model EngagementEvent {
-  id        Int      @id @default(autoincrement())
-  event     String
-  page      String
-  visitorId String
-  metadata  Json?
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  event      String
+  page       String
+  visitorId  String
+  deviceHash String?
+  userAgent  String?
+  referrer   String?
+  country    String?
+  isAdmin    Boolean  @default(false)
+  metadata   Json?
+  createdAt  DateTime @default(now())
 
   @@index([createdAt])
   @@index([event])
   @@index([visitorId])
+  @@index([deviceHash])
+  @@index([isAdmin, createdAt])
 }
 
 model ApiUsageLog {

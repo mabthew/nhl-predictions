@@ -1,5 +1,6 @@
 import Link from "next/link";
 import FeedbackButton from "./FeedbackButton";
+import OutboundLink from "./OutboundLink";
 
 export default function Footer() {
   return (
@@ -36,10 +37,10 @@ export default function Footer() {
               Data Sources
             </h4>
             <ul className="space-y-2">
-              <li><a href="https://api-web.nhle.com" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">NHL API</a></li>
-              <li><a href="https://the-odds-api.com" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">The Odds API</a></li>
-              <li><a href="https://www.cbssports.com/nhl/injuries/" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">CBS Sports Injuries</a></li>
-              <li><a href="https://www.dailyfaceoff.com/teams" target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors">Daily Faceoff</a></li>
+              <li><OutboundLink href="https://api-web.nhle.com" label="NHL API" className="text-white/60 hover:text-white transition-colors">NHL API</OutboundLink></li>
+              <li><OutboundLink href="https://the-odds-api.com" label="The Odds API" className="text-white/60 hover:text-white transition-colors">The Odds API</OutboundLink></li>
+              <li><OutboundLink href="https://www.cbssports.com/nhl/injuries/" label="CBS Sports Injuries" className="text-white/60 hover:text-white transition-colors">CBS Sports Injuries</OutboundLink></li>
+              <li><OutboundLink href="https://www.dailyfaceoff.com/teams" label="Daily Faceoff" className="text-white/60 hover:text-white transition-colors">Daily Faceoff</OutboundLink></li>
             </ul>
           </div>
 

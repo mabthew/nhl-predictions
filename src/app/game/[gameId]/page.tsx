@@ -398,34 +398,43 @@ export default async function GameDetailPage({
                     </div>
                   </div>
                 </div>
-                {game.puckLine.confidence != null && (
-                  <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border-gray/40">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-medium-gray">
-                      Spread Confidence
-                    </span>
-                    <div className="flex-1 h-2 bg-light-gray rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${
-                          game.puckLine.confidence >= 50
-                            ? "bg-green-500"
-                            : game.puckLine.confidence >= 35
-                              ? "bg-yellow-500"
-                              : "bg-espn-red"
-                        }`}
-                        style={{ width: `${game.puckLine.confidence}%` }}
-                      />
+                {game.puckLine.favoriteCoverProbability != null && (() => {
+                  const favCovers = game.puckLine.favoriteCoverProbability;
+                  const flip = favCovers < 50;
+                  const favoriteIsHome = game.puckLine.homeSpread < 0;
+                  const pickIsHome = flip ? !favoriteIsHome : favoriteIsHome;
+                  const pickTeam = pickIsHome ? homeTeam.teamAbbrev : awayTeam.teamAbbrev;
+                  const pickLine = flip ? "+1.5" : "-1.5";
+                  const pickConfidence = flip ? 100 - favCovers : favCovers;
+                  return (
+                    <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border-gray/40">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-medium-gray">
+                        Spread Pick: {pickTeam} {pickLine}
+                      </span>
+                      <div className="flex-1 h-2 bg-light-gray rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            pickConfidence >= 65
+                              ? "bg-green-500"
+                              : pickConfidence >= 55
+                                ? "bg-yellow-500"
+                                : "bg-espn-red"
+                          }`}
+                          style={{ width: `${pickConfidence}%` }}
+                        />
+                      </div>
+                      <span className={`text-sm font-bold ${
+                        pickConfidence >= 65
+                          ? "text-green-600"
+                          : pickConfidence >= 55
+                            ? "text-yellow-600"
+                            : "text-espn-red"
+                      }`}>
+                        {pickConfidence}%
+                      </span>
                     </div>
-                    <span className={`text-sm font-bold ${
-                      game.puckLine.confidence >= 50
-                        ? "text-green-600"
-                        : game.puckLine.confidence >= 35
-                          ? "text-yellow-600"
-                          : "text-espn-red"
-                    }`}>
-                      {game.puckLine.confidence}%
-                    </span>
-                  </div>
-                )}
+                  );
+                })()}
                 <p className="text-[11px] text-medium-gray mt-3">
                   The puck line is always -1.5/+1.5. The favorite must win by 2 or more goals to cover.
                 </p>
