@@ -34,6 +34,12 @@ export default async function SeasonRecordCard() {
     .filter((r) => r.category !== "overall")
     .reduce((sum, r) => sum + r.wins + r.losses + r.pushes, 0);
 
+  // Hide individual category rows that have no graded picks yet.
+  // Overall always shows once at least one category has data.
+  const visibleRows = record.rows.filter(
+    (r) => r.category === "overall" || r.wins + r.losses + r.pushes > 0
+  );
+
   return (
     <section className="bg-white rounded-sm relative shadow-sm mb-6">
       <div className="absolute top-0 inset-x-0 h-[2px]" style={perforationStyle} />
@@ -51,8 +57,16 @@ export default async function SeasonRecordCard() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-4 sm:gap-y-0">
-          {record.rows.map((r, i) => (
+        <div
+          className={`grid gap-y-4 sm:gap-y-0 ${
+            visibleRows.length <= 2
+              ? "grid-cols-2"
+              : visibleRows.length === 3
+                ? "grid-cols-2 sm:grid-cols-3"
+                : "grid-cols-2 sm:grid-cols-4"
+          }`}
+        >
+          {visibleRows.map((r, i) => (
             <div
               key={r.category}
               className={`px-3 sm:px-3 ${
